@@ -1,0 +1,9 @@
+#!/bin/bash
+
+#  Shorthand starter  - Edit path if needed
+
+#  May be placed in PATH, perhaps, with main script in userland ...
+
+. quickemu-mod
+
+#  

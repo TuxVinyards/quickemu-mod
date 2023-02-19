@@ -1,0 +1,78 @@
+{
+	"folders": [
+
+		{
+			"path": "."
+		},
+			
+	],
+
+	"settings": {
+
+		"shellcheck.exclude": [
+
+			// 2140 add to suppress the multiple warnings given about quickemu's 'args' array structure
+			// See http://mywiki.wooledge.org/BashGuide/Practices#Readability 
+			// https://www.shellcheck.net/wiki/SC2140
+
+			//  TEMP 
+
+			"2140",  
+
+			// 2054 add to suppress the multiple warnings given about quickemu's 'args' array structure
+			// See http://mywiki.wooledge.org/BashGuide/Practices#Readability 
+			// https://www.shellcheck.net/wiki/SC2054
+
+			//  TEMP 
+
+			"2054",   
+
+			// 2206 add to suppress the multiple warnings given about quickemu's 'args' array structure
+			// See http://mywiki.wooledge.org/BashGuide/Practices#Readability 
+			// https://www.shellcheck.net/wiki/SC2206
+
+			//  TEMP 
+
+			"2206",   
+
+			// 2207 add to suppress the multiple warnings given about quickemu's 'args' array structure
+			// See http://mywiki.wooledge.org/BashGuide/Practices#Readability 
+			// https://www.shellcheck.net/wiki/SC2207
+
+			//  TEMP 
+
+			"2207",   
+
+			// 2242 clashes with use of exit traps used to keep mouse click scripts open
+			// https://www.shellcheck.net/wiki/SC2242
+
+			"2242",
+
+			// 2164 Use cd ... || exit in case cd fails
+			// true but can get over pedantic with the checking structure  REVIEW 
+			// https://www.shellcheck.net/wiki/SC2164
+
+			// "2164",
+
+			// 1117  "\n" checker. This is officially now 'retired as too pedantic'  REVIEW 
+			// https://www.shellcheck.net/wiki/SC1117
+
+			"1117",
+
+			// 1090 conitinuity checker - fails if using dynamic script sourcing
+			// https://www.shellcheck.net/wiki/SC1090
+
+			// "1090",   REVIEW  not needed at present with q-mod
+
+			// 2034  var appears unused - can clash when setting flags & if using dynamic script sourcing
+			// https://www.shellcheck.net/wiki/SC2034
+
+			// "2034"   REVIEW 
+
+
+		],
+
+
+	}
+
+}

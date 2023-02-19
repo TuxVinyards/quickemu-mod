@@ -1,0 +1,144 @@
+#! /bin/bash
+
+##  Copyright (c)  Alex Genovese   https://github.com/TuxVinyards
+
+# 	licence:  GPL3   https://www.gnu.org/licenses 
+
+
+## Settings file for 'quickemu-mod' & 'quickget-mod'   2023.02   beta 1
+
+
+  # Default location of the settings script is either "$HOME" or a userland VM folder where 'quickemu-mod' has been placed.
+
+
+  # Using the home folder allows allows multiscript installation:
+
+  # Q-Mod itself may be then installed next-to or instead-of standard quickemu in /usr/bin
+
+  # &  also as one qmod script per VM folder which will then autoscan its current position for .conf files
+
+
+  # Multiple settings files may also be used.  A file that is local to the qmod script will overide that located at $HOME
+
+
+  # If using non-default locations or changing the filename, then the settings section of the main script must be edited. NB 
+
+
+  # Adding a dot to the front of this settings filename will hide/tidy it away (ctrl-h to unhide/hide).
+
+  # After the locations are established, settings may be opened (hidden or not) and edited from within mod scripts via a menu selector.
+
+  # Adding a dot is recommended for any placement in the main $HOME folder
+
+
+
+
+## SET THE DEFAULT VM FOLDER, where the Virtual Machines are normally found. 
+
+# May be left blank if the main quickemu-mod script is already located there. 
+
+# shellcheck disable=SC2034,SC2154   
+
+# eg. Default_VM_Folder="/media/xxx/Files/VMQs"
+
+Default_VM_Folder=
+
+# A second & third may also be set:
+
+Second_VM_Folder=
+
+Third_VM_Folder=
+
+
+#  GENERAL COLOR & THEMING  
+
+X_Shade="3" 
+
+#  Yellow 3 (recommended), Blue 4, Cyan 6 (brighter blue), Red 1
+
+#  https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
+
+
+#  TEXT EDITOR  
+
+#  Leave blank to use system defaults for editing the settings file, otherwise give "name" of a specific editor  
+
+TextEditor=
+
+
+if [[ $1 == "QMOD" ]]; then
+
+  # SET THE ASSOCIATIVE ARRAY with  ,0] as the discrete VM folder  &  ,1] as the .conf   
+
+  # These VM's will show at the top of the list. Any others will list afterwards. 
+
+  # eg:
+
+  # VM_Array[0,0]="/media/xxx/Storage/VMQs" ; VM_Array[0,1]="windows-11.conf"
+
+  # VM_Array[1,0]="/media/xxx/Storage/VMQs/Insider" ; VM_Array[1,1]="windows-11.conf"
+
+  # VM_Array[2,0]="$Default_VM_Folder" ; VM_Array[2,1]="macos-catalina.conf"
+
+  # NB should be contiguous, non-sparse
+  
+
+  VM_Array[0,0]= ; VM_Array[0,1]=
+
+  VM_Array[1,0]= ; VM_Array[1,1]=
+
+  VM_Array[2,0]= ; VM_Array[2,1]=
+
+  VM_Array[3,0]= ; VM_Array[3,1]=
+
+  VM_Array[4,0]= ; VM_Array[4,1]=
+
+
+
+  # OPTIONS
+
+  VerboseArgs=                #  Set =1  to normally display the qemu args, with okay dialogue, in human readable & before booting.  
+
+  #                           #  Set blank for log file only. In menu toggle also available. (A log file is always outputted to the VM's main folder) 
+
+
+  EXTRA_ARGS=                 #  May be added here, if normally required. Also add here to attempt overide standard quickemu settings.
+
+  #                           #  A simpler and improved method is possible in the mod script than with the original one. 
+
+  #                           #  See  https://qemu.readthedocs.io/en/latest/system/invocation.html
+
+  #                           #  Format = "group quoted" with single-space separated elements eg: 
+
+  #                           #  EXTRA_ARGS="-device tpm-tis,tpmdev=tpm0"     
+
+
+
+  WinHyperV_RC=               #  Windows Hypervisor Recipe.  Leave blank for defaults.  
+
+  #                           #  Or edit / create / uncomment as needed. NB comma separated, no spaces.
+
+
+  # Quickemu 4.3/4.4/4.5 recipe:
+
+  # WinHyperV_RC="-cpu host,kvm=on,+hypervisor,+invtsc,l3-cache=on,migratable=no,hv_passthrough"
+
+  # Quickemu 4.2 (qemu ver 6.0) recipe (two lines):
+
+  # WinHyperV_RC="-cpu host,kvm=on,+hypervisor,+invtsc,l3-cache=on,migratable=no,hv_frequencies,kvm_pv_unhalt,hv_reenlightenment,"
+  # WinHyperV_RC+="hv_relaxed,hv_spinlocks=8191,hv_stimer,hv_synic,hv_time,hv_vapic,hv_vendor_id=1234567890ab,hv_vpindex"
+
+  # See section 'WINDOWS & HYPERVISOR' in this script for more details.
+
+
+  ## File for default KVM behaviour for unhandled machine-specific registers. ( REVIEW )
+  
+  #  Edit here if your OS locates 'modprobe.d' differently.  QMOD default is "/etc/modprobe.d/kvm-quickemu.conf"
+
+  KVM_MSR_ModProbeFile="/etc/modprobe.d/kvm-quickemu.conf"
+
+
+fi
+
+
+## End of Settings

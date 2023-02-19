@@ -32,5 +32,5 @@ And that your file manager is set 'ask each time' in the behaviour section.  Som
 ![Screenshot at 2023-02-19 10-30-38](https://user-images.githubusercontent.com/3956806/219940035-9d4df156-8309-4845-8432-05941749dda1.png)
 
 
-Click and go. :thumb-up:
+Click and go. 👍:
 

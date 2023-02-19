@@ -45,7 +45,7 @@ Click and go. 👍
 
 Hopefully there won't be too many issues. I want to get on with finishing the modded version of QuickGet ...
 
-I have included a (Visual Studio) Code workspace file to help anyone doing editing. The global shellcheck supression will help with all the 'args' warnings that come from the original quickemu code.  (may adapt for other editors too)
+I have included a (Visual Studio) Code workspace file to help anyone doing editing. The global shellcheck supression will help with all the 'args' warnings that come from the original quickemu code  (may adapt for other editors too).
 
 Please make any pull requests annotated. Explain how the code works so everyone can follow what's going on. 
 

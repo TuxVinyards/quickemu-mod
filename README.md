@@ -17,7 +17,7 @@ Currently in beta 1.   QuickGet-Mod to follow shortly, depending on how this for
 
 New added fixes & features. Very configurable. Windows Hypervisor Recipes ... See the settings file.
 
-### Install
+## Install
 
 Currently, set up with the original quickemu as normal.  
 
@@ -29,7 +29,7 @@ Make sure you have given the scripts "allow executing" +x permissions.
 
 
 
-And that your file manager is set 'ask each time' in the behaviour section.  Some desktops will be slightly different ...
+And that your file manager is set to 'ask each time' in the behaviour section.  Some desktops will be slightly different ...
 
 
 ![Screenshot at 2023-02-19 10-30-38](https://user-images.githubusercontent.com/3956806/219940035-9d4df156-8309-4845-8432-05941749dda1.png)

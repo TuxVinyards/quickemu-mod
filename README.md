@@ -21,7 +21,7 @@ New added fixes & features. Very configurable. Windows Hypervisor Recipes ... Se
 
 Currently, set up with the original quickemu as normal.  https://github.com/quickemu-project/quickemu
 
-Then, download the qmod zip to your VMs folder.  Settings file has full details for location tweaks and other features.
+Then, download the qmod zip to your VMs folder.  The settings file has full details for location tweaks and other features.
 
 Make sure you have given the scripts "allow executing" +x permissions.  
 

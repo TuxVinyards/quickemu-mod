@@ -41,3 +41,16 @@ Set your terminal screen width to wide enough, maybe.
 
 Click and go. 👍
 
+## Issues & Pull Requests
+
+Hopefully there won't be too many issues. I want to get on with finishing the modded version of QuickGet ...
+
+I have included a (Visual Studio) Code workspace file to help anyone doing editing. The global shellcheck supression will help the 'args' warnings that come from the original quickemu code.  
+
+Please make any pull requests annotated. Explain how the code works so everyone can follow what's going on. 
+
+Everyone codes differently, I know, but I think readabilty & KISS (keep it simple & straightforward) is key.
+
+http://mywiki.wooledge.org/BashGuide/Practices#Readability 
+
+No densely packed lines of unexplained regex style hieroglyphics, please, to put it another way. :lol:

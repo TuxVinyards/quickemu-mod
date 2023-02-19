@@ -15,10 +15,10 @@ Use this script along-side original quickemu or as a backwardly compatible drop-
 
 Currently in beta 1.   QuickGet-Mod to follow shortly, depending on how this fork works out.  
 
-Lots of new added fixes & features. Very configurable. See the settings file.
+New added fixes & features. Very configurable. Windows Hypervisor Recipes ... See the settings file.
 
 
-Install original quickemu as normal.  Download the qmod zip to your VMs folder ...  Read notes in settings file for full details.
+Install original quickemu as normal.  Download the qmod zip to your VMs folder.  Read notes in settings file for full details.
 
 Make sure you have given the scripts "allow executing" +x permissions.  
 

@@ -3141,7 +3141,7 @@ else
 
       else  printf  "\n\n  [v]   show verbose qemu args before booting, change from log file only"	; fi
 
-      printf  "\n\n  [xa]  add extra qemu args"
+      printf  "\n\n  [xa]  add extra qemu args  [m] toggle msrs defaults"
       
       [[ $EXTRA_ARGS ]] && printf  "   Current Extra: \n\n  %s"  "$EXTRA_ARGS"
 
@@ -3193,6 +3193,10 @@ else
     elif [[ $MainMenuChoice == "set" ]] ; then
 
       qmod_edit_settings
+
+    elif [[ $MainMenuChoice == "m" ]] ; then
+
+      toggle_msr_defaults
 
     elif [[ $MainMenuChoice == "d" ]] ; then 
 

@@ -2295,7 +2295,7 @@ toggle_msr_defaults () {
 
   else
 
-    printf "\n\n  Configure default KVM behaviour for unhandled machine-specific registers"
+    printf "\n\n  Configure default, load-up, KVM behaviour for unhandled machine-specific registers"
 
     printf "\n\n  Normal setting is N (don't ignore) but Windows and MacOS require Y (true) 'ignore' "
 
@@ -3141,7 +3141,7 @@ else
 
       else  printf  "\n\n  [v]   show verbose qemu args before booting, change from log file only"	; fi
 
-      printf  "\n\n  [xa]  add extra qemu args  [m] toggle msrs defaults"
+      printf  "\n\n  [xa]  add extra qemu args  [m] toggle msrs "
       
       [[ $EXTRA_ARGS ]] && printf  "   Current Extra: \n\n  %s"  "$EXTRA_ARGS"
 
@@ -3196,7 +3196,11 @@ else
 
     elif [[ $MainMenuChoice == "m" ]] ; then
 
-      toggle_msr_defaults
+      show_kvm_sudo_security_note
+      
+      KVM_MSR_selector="h"
+
+      select_msr_config
 
     elif [[ $MainMenuChoice == "d" ]] ; then 
 

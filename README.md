@@ -39,7 +39,7 @@ Terminal screen width can usually be adjusted in the profile settings.
 
 Click on the 'Code' button, then 'Download ZIP'
 
-![Uploading Screenshot at 2023-02-21 10-49-29-480.png…]()
+![Screenshot at 2023-02-21 10-49-29-560](https://user-images.githubusercontent.com/3956806/220318265-e05b5f26-54b6-49e7-bc60-79df14b08a89.png)
 
 
 ## Issues & Pull Requests

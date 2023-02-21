@@ -26,7 +26,7 @@ Make sure you have given the scripts "allow executing" +x permissions.  Click an
 
 The initial set up should be with the original quickemu as normal.  https://github.com/quickemu-project/quickemu
 
-Read the main file & settings file for further details on location tweaks and other features.
+Read the qmod main file & settings file for further details on location tweaks and other features.
 
 Your file manager may need setting to 'ask each time' in the behaviour section.  Some desktops will be slightly different ...
 

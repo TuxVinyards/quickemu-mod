@@ -44,9 +44,11 @@ Click on the 'Code' button, then 'Download ZIP'
 
 ## Issues & Pull Requests
 
-In response to https://github.com/quickemu-project/quickemu/issues/572  Windows 10 VM won't launch after upgrade from 4.3 to 4.4 &  https://github.com/quickemu-project/quickemu/issues/553  2022-08 Security Update for Windows fails to install I started looking at the Martin's quickemu script, in depth  :rofl:
+In response to https://github.com/quickemu-project/quickemu/issues/572  Windows 10 VM won't launch after upgrade from 4.3 to 4.4 &  https://github.com/quickemu-project/quickemu/issues/553  2022-08 Security Update for Windows fails to install, I started looking at Martin's quickemu script, in depth  :rofl:
 
 Currently in beta 1.  Hopefully there won't be too many issues. I want to get on with finishing the modded version of QuickGet ...
+
+For Windows Updates & Boot problems, for see my comments and notes to those issues, on Martin's pages.
 
 I have included a (Visual Studio) Code workspace file to help anyone doing editing. The global shellcheck supression will help with all the 'args' warnings that come from the original quickemu code  (may adapt for other editors too).
 

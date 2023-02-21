@@ -35,6 +35,9 @@ Terminal screen width can usually be adjusted in the profile settings.
 
 ![term-tweak](https://user-images.githubusercontent.com/3956806/219943219-ddbe3547-bcd6-4d48-afb0-b549c4810a9c.png)
 
+Click on the 'Code' button, then 'Download ZIP'
+
+![Screenshot at 2023-02-21 10-49-29](https://user-images.githubusercontent.com/3956806/220310494-0159d5af-6654-4b8c-b6e0-b399e6c8e841.png)
 
 
 

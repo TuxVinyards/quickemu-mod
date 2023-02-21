@@ -3,7 +3,9 @@ Quickemu Mod - Virtual Machine Launcher  -  A menu interfaced version of quickem
 
 ### Combines the benefits of the command line with the ease of the graphical.
 
-New added fixes & features. Very configurable. Easy Snapshots, MSRS toggle, Windows Hypervisor Recipes ... 
+New added fixes & features. 
+
+Easy Snapshots. Very configurable, MSRS toggle, Windows Hypervisor Recipes ... 
 
 ![Screenshot at 2023-02-19 10-06-08](https://user-images.githubusercontent.com/3956806/219939020-f3d8c512-4366-4186-8979-eebc879ed2aa.png)
 
@@ -37,8 +39,7 @@ Terminal screen width can usually be adjusted in the profile settings.
 
 Click on the 'Code' button, then 'Download ZIP'
 
-![Screenshot at 2023-02-21 10-49-29](https://user-images.githubusercontent.com/3956806/220310494-0159d5af-6654-4b8c-b6e0-b399e6c8e841.png)
-
+![Uploading Screenshot at 2023-02-21 10-49-29-480.png…]()
 
 
 ## Issues & Pull Requests

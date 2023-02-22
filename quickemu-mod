@@ -1585,15 +1585,19 @@ function vm_boot() {
       sdl) export SDL_MOUSE_FOCUS_CLICKTHROUGH=1;;
     esac
 
+    # Log file, in (re) executable .sh format:
+
     echo "${QEMU}" "${SHELL_ARGS}" >> "${VMDIR}/${VMNAME}.sh"
 
-    # -D  https://qemu.readthedocs.io/en/latest/system/invocation.html  ??
+    # Send command to qemu, with args list.  (with -D as error log)
 
     ${QEMU} "${args[@]}" -D "${VMDIR}/${VMNAME}.log"  &
 
+    # -D  https://qemu.readthedocs.io/en/latest/system/invocation.html  ??
+
     # sleep 0.25   (mod ??)
 
-    # MOD  allow time for any system boot messages to show, before tidying up screen output
+    # MOD  tidy up screen output - allow time for any system boot messages to show, before returning to the bash prompt
 
     [[ $CLI ]] && sleep 40 && printf "\n"
 
@@ -2062,9 +2066,13 @@ function quickemu () {
 			while [ $# -gt 0 ]; do
 					case "${1}" in
             --path|-path)
+              ! cd "$2"  &&  printf "\n\n  Path ERROR: folder not found \n\n" && exit 1
               shift
-              ! cd "$1"  &&  printf "\n\n  Path ERROR: folder not found \n\n" && exit 1
               shift;;
+            --vm|-vm)
+							VM="${2}"
+							shift
+							shift;;
 						--toggle_msr_defaults|-toggle_msr_defaults)
 							toggle_msr_defaults
 							shift;;
@@ -2106,10 +2114,6 @@ function quickemu () {
 							shift;;
 						-status-quo|--status-quo)
 							STATUS_QUO="-snapshot"
-							shift;;
-						-vm|--vm)
-							VM="${2}"
-							shift
 							shift;;
 						-viewer|--viewer)
 							VIEWER="${2}"
@@ -2270,6 +2274,8 @@ function_find_kvm_msr_default_and_status () {
 
   # outputs boths vars 'KVM_MSR_DefaultConf' & 'KVM_MSR_status' with value Y or N 
 
+  # finds and flags if MSRS has a config conflict
+
   KVM_MSR_status="$(cat /sys/module/kvm/parameters/ignore_msrs)"
 
   [[ ! $KVM_MSR_ModProbeFile ]] && KVM_MSR_ModProbeFile="/etc/modprobe.d/kvm-quickemu.conf"
@@ -2279,6 +2285,47 @@ function_find_kvm_msr_default_and_status () {
   [[ "$KVM_MSR_DefaultConf" == *'=Y' ]] &&  KVM_MSR_default="Y"
 
   [[ "$KVM_MSR_DefaultConf" == *'=N' ]] || [[ ! -e "$KVM_MSR_ModProbeFile" ]] &&  KVM_MSR_default="N"
+
+  if [[ $VM_InstanceName ]]; then
+  
+    if [[ "$VM_InstanceName" == *windows*  ]] ||	[[ "$VM_InstanceName" == *macos*  ]] ; then
+
+      if [[ $KVM_MSR_status == "N" ]]; then KVM_MSR_Error=1 ; else KVM_MSR_Error= ; fi
+
+    elif [[ "$VM_InstanceName" != *windows*  ]] &&	[[ "$VM_InstanceName" != *macos*  ]] ; then
+
+      if [[ $KVM_MSR_status == "Y" ]]; then KVM_MSR_Error=1 ; else KVM_MSR_Error= ; fi
+
+    else
+
+      KVM_MSR_Error=
+
+    fi
+
+  fi
+}
+
+print_kvm_status () {
+
+  function_find_kvm_msr_default_and_status
+
+  if [[ $KVM_MSR_status == "Y" ]] ; then  
+  
+    printf "\n\n  KVM:  /sys/module/kvm/parameters/ignore_msrs  = Y" 
+
+    [[ $VM_InstanceName ]] && [[ $KVM_MSR_Error ]] && printColor "  ERROR " 
+
+    printf "\n"
+    
+  else 
+
+    printf "\n\n  KVM:  /sys/module/kvm/parameters/ignore_msrs  = N" 
+
+    [[ $VM_InstanceName ]] && [[ $KVM_MSR_Error ]] && printColor "  ERROR " 
+
+    printf "\n"
+
+  fi
 
 }
 
@@ -2325,14 +2372,17 @@ toggle_msr_defaults () {
 
       printf "\n\n  Updating 'initramfs' may take a moment or two ... \n\n"
 
-      echo "options kvm ignore_msrs=Y" | sudo tee "$KVM_MSR_ModProbeFile"
+      # As per Martin's solution in original quickemu, needs 'tee' to get this to work, 
+      # but route tee's stdout to null to tidy the screen 
+
+      echo "options kvm ignore_msrs=Y" | sudo tee "$KVM_MSR_ModProbeFile" 1> /dev/null
       sudo update-initramfs -k all -u
 
     elif [[ $Set_MSR_defaults == "n" ]]; then
 
       printf "\n\n  Updating 'initramfs' may take a moment or two ... \n\n"
 
-      echo "options kvm ignore_msrs=N" | sudo tee "$KVM_MSR_ModProbeFile"
+      echo "options kvm ignore_msrs=N" | sudo tee "$KVM_MSR_ModProbeFile" 1> /dev/null
       sudo update-initramfs -k all -u
 
     fi
@@ -2375,36 +2425,47 @@ show_kvm_sudo_security_note () {
   
   printf   "\n\n  Or it may be carried out manually...  See settings, script & further notes for details."
  
-  printf   "\n\n"
+  printf "\n\n\n  Windows or MacOS should be set to 'Y' "
+ 
+  printf   "\n"
   
 }
 
 
 select_msr_config () {
 
-  # Only displays if MSRS/OS conflict exists
+  # MSR_offer normally present if MSRS/OS conflict previously detected, 
+  # however, presume selector is being used to change current status  REVIEW 
+
+  print_kvm_status
+  if [[ $KVM_MSR_status == "Y" ]]; then MSR_offer="N" ; else MSR_offer="Y" ; fi
+
+  KVM_MSR_selector=
+
+  [[ $KVM_MSR_selector_LoadHelp ]] && show_kvm_sudo_security_note  &&  print_kvm_status
+
 
   while true ; do
 
     if [[ $MSR_offer == "Y" ]]; then
 
-      printf "\n\n  Set Y : echo 1 | sudo tee /sys/module/kvm/parameters/ignore_msrs ? "
+      printf "\n\n  Set Y : echo 1 | sudo /sys/module/kvm/parameters/ignore_msrs ? "
 
-      printColor "\n\n  [enter] to set Y "
+      printColor "\n\n  [y] to set Y "
 
-      printf "  [n]  leave as N"
+      printf "  [enter]  leave as N"
 
     else
 
-      printf "\n\n  Set N : echo 0 | sudo tee /sys/module/kvm/parameters/ignore_msrs ? "
+      printf "\n\n  Set N : echo 0 | sudo /sys/module/kvm/parameters/ignore_msrs ? "
 
-      printColor "\n\n  [enter] to set N "
+      printColor "\n\n  [n] to set N "
 
-      printf "  [y]  leave as Y"
+      printf "  [enter]  leave as Y"
 
     fi
     
-    if [[ $KVM_MSR_selector == "h" ]]; then printf "   [d] to set the load up defaults \n\n"
+    if [[ $KVM_MSR_selector == "h" ]] || [[ $KVM_MSR_selector_LoadHelp ]] ; then printf "   [d] to set the boot defaults \n\n"
 
     else  printf "   [h] see help  \n\n" 
 
@@ -2414,15 +2475,25 @@ select_msr_config () {
     
     printf "\n"
 
-    if [[ ! $KVM_MSR_selector ]]; then
+    [[ ! $KVM_MSR_selector ]]  &&  break   
 
-      [[ $MSR_offer == "Y" ]] &&  echo 1 | sudo tee /sys/module/kvm/parameters/ignore_msrs  2> /dev/null   &&  break
+    if [[ $KVM_MSR_selector == "y" ]] || [[ $KVM_MSR_selector == "n" ]]; then   
 
-      [[ $MSR_offer == "N" ]] &&  echo 0 | sudo tee /sys/module/kvm/parameters/ignore_msrs  2> /dev/null   &&  break
+      # As per Martin's solution in original quickemu, needs 'tee' to get this to work, 
+      # but route tee's stdout to null to tidy the screen  
+
+      [[ $KVM_MSR_selector == "y" ]] &&  echo 1 | sudo tee /sys/module/kvm/parameters/ignore_msrs  1> /dev/null   
+
+      [[ $KVM_MSR_selector == "n" ]] &&  echo 0 | sudo tee /sys/module/kvm/parameters/ignore_msrs  1> /dev/null  
+
+      print_kvm_status
+
+      printColor "\n\n  [enter]  to return \n\n"
+      read -rp  "  > "
+
+      break
 
     fi
-
-    [[ $KVM_MSR_selector == "h" ]] && show_kvm_sudo_security_note    
 
     if [[ $KVM_MSR_selector == "d" ]]; then
 
@@ -2431,23 +2502,79 @@ select_msr_config () {
       if [[ $Set_MSR_defaults == "b" ]]; then 
       
         Set_MSR_defaults= 
-        KVM_MSR_status="$(cat /sys/module/kvm/parameters/ignore_msrs)"
-
+        print_kvm_status
         printColor "\n\n  Make TEMPORARY setting adjustments to MSRS ?"
 
-        printf "\n\n  Current Status:  /sys/module/kvm/parameters/ignore_msrs =  %s "  "$KVM_MSR_status"
-
-      else break ; fi 
+      else 
+        function_find_kvm_msr_default_and_status
+        break 
+      fi 
 
     fi
-
-    [[ $KVM_MSR_selector == "y" ]] || [[ $KVM_MSR_selector == "n" ]]  &&  break   
 
   done
 
   KVM_MSR_selector=
+  KVM_MSR_selector_LoadHelp=
 
 }
+
+msrs_conflict_check_resolver() {  
+
+  # Do a check ...
+
+  function_find_kvm_msr_default_and_status
+    
+  # Display & Offer config settings if MSRS/OS CONFLICT exists
+
+  if [[ $KVM_MSR_status == "N" ]] ; then
+
+    # usual system default = N
+
+    if [[ "$VM_InstanceName" == *windows*  ]] ||	[[ "$VM_InstanceName" == *macos*  ]] ; then 
+    
+      printColor "\n\n  Selected: %s "  "$VM_InstanceName"
+      
+      printf " 'ignore_msrs' is recommended for Windows and Mac"  
+
+      #printf "\n\n  Status:  /sys/module/kvm/parameters/ignore_msrs = N   Default = %s"  "$KVM_MSR_default"
+
+      MSR_offer="Y"
+
+      select_msr_config
+
+      function_find_kvm_msr_default_and_status
+
+      if [[ $KVM_MSR_status == "N" ]]; then KVM_MSR_Error=1 ; else KVM_MSR_Error= ; fi
+
+    fi
+    
+  else
+
+    #  Status = Y  &  which is only recommended for Windows & Mac 
+
+    if [[ "$VM_InstanceName" != *windows*  ]] &&	[[ "$VM_InstanceName" != *macos*  ]] ; then
+
+      printColor "\n\n  Selected: %s "  "$VM_InstanceName"
+    
+      printf " 'ignore_msrs' is only recommended for Windows and Mac"  
+
+      #printf "\n\n  Status:  /sys/module/kvm/parameters/ignore_msrs = Y   Default = %s"  "$KVM_MSR_default"
+
+      MSR_offer="N"
+
+      select_msr_config
+
+      function_find_kvm_msr_default_and_status
+
+      if [[ $KVM_MSR_status == "Y" ]]; then KVM_MSR_Error=1 ; else KVM_MSR_Error= ; fi
+
+    fi
+
+  fi
+  
+}
+
 
 
 function_conf_error () {
@@ -2534,9 +2661,7 @@ function_Select_VM () {
     if [[ $Default_VM_Folder != "$CurrentFolder" ]]; then
 
       DefaultFolder_Conf_String="$(ls "$Default_VM_Folder/"*.conf 2> /dev/null)"
-
       DefaultFolder_Conf_String=${DefaultFolder_Conf_String//"$Default_VM_Folder/"/}
-
       mapfile -t  DefaultFolder_Conf_Array  <<< "$DefaultFolder_Conf_String"
 
     fi
@@ -2544,9 +2669,7 @@ function_Select_VM () {
     if [[ $Second_VM_Folder ]] && [[ $Second_VM_Folder != "$CurrentFolder" ]]; then
 
       SecondFolder_Conf_String="$(ls "$Second_VM_Folder/"*.conf 2> /dev/null)"
-
       SecondFolder_Conf_String=${SecondFolder_Conf_String//"$Second_VM_Folder/"/}
-
       mapfile -t  SecondFolder_Conf_Array  <<< "$SecondFolder_Conf_String"
 
     fi
@@ -2554,9 +2677,7 @@ function_Select_VM () {
     if [[ $Third_VM_Folder ]] && [[ $Third_VM_Folder != "$CurrentFolder" ]]; then
 
       ThirdFolder_Conf_String="$(ls "$Third_VM_Folder/"*.conf 2> /dev/null)"
-
       ThirdFolder_Conf_String=${ThirdFolder_Conf_String//"$Third_VM_Folder/"/}
-
       mapfile -t  ThirdFolder_Conf_Array  <<< "$ThirdFolder_Conf_String"
 
     fi
@@ -2580,11 +2701,9 @@ function_Select_VM () {
       while [[ ${VM_Array[$i,0]} ]]; do
 
         ArrFolderFile="${VM_Array[$i,0]}/${VM_Array[$i,1]}"
-
         TestFolderFile="$1/$2"
 
         [[ $ArrFolderFile == "$TestFolderFile" ]] && return
-        
         ((i+=1))
 
       done
@@ -2604,36 +2723,25 @@ function_Select_VM () {
 
 
     if [[ ${CurrentFolder_Conf_Array[0]} ]]; then 
-    
       for TestFile in "${CurrentFolder_Conf_Array[@]}"; do function_VM_array_add_confs  "$CurrentFolder" "$TestFile" ; done
-
     fi
 
     if [[ ${DefaultFolder_Conf_Array[0]} ]]; then 
-    
       for TestFile in "${DefaultFolder_Conf_Array[@]}"; do function_VM_array_add_confs  "$Default_VM_Folder" "$TestFile" ; done
-
     fi
 
     if [[ ${SecondFolder_Conf_Array[0]} ]]; then 
-    
       for TestFile in "${SecondFolder_Conf_Array[@]}"; do function_VM_array_add_confs  "$Second_VM_Folder" "$TestFile" ; done
-
     fi
 
     if [[ ${ThirdFolder_Conf_Array[0]} ]]; then 
-    
       for TestFile in "${ThirdFolder_Conf_Array[@]}"; do function_VM_array_add_confs  "$Third_VM_Folder" "$TestFile" ; done
-
     fi
 
 
     if [[ ! ${VM_Array[0,0]} ]] ; then
-
       function_conf_error  "VM ARRAY - No VMs found?"
-
       SelectArrayError=1
-
     fi
 
     # end of VM selector routine
@@ -2661,9 +2769,7 @@ function_Select_VM () {
 
     printf "\n\n  Selecting instance %s \n\n"  "$VM_Selection"
 
-
     VM_Conf_Dir="${VM_Array[$VM_Selection,0]}"
-
     VM_Conf_File="${VM_Array[$VM_Selection,1]}"
 
   fi
@@ -2707,46 +2813,7 @@ function_Select_VM () {
 
     function_find_kvm_msr_default_and_status
 
-
-    ## Display config settings if MSRS/OS conflict exists
-
-    if [[ $KVM_MSR_status == "N" ]] ; then
-
-      # usual system default = N
-
-      if [[ "$VM_InstanceName" == *windows*  ]] ||	[[ "$VM_InstanceName" == *macos*  ]] ; then 
-      
-        printColor "\n\n  Selected: %s "  "$VM_InstanceName"
-        
-        printf " 'ignore_msrs' is recommended for Windows and Mac"  
-
-        printf "\n\n  Status:  /sys/module/kvm/parameters/ignore_msrs = N   Default = %s"  "$KVM_MSR_default"
-
-        MSR_offer="Y"
-
-        select_msr_config
-
-      fi
-      
-    else
-
-      #  Status = Y  &  which is recommended for Windows & Mac 
-
-      if [[ "$VM_InstanceName" != *windows*  ]] &&	[[ "$VM_InstanceName" != *macos*  ]] ; then
-
-        printColor "\n\n  Selected: %s "  "$VM_InstanceName"
-      
-        printf " 'ignore_msrs' is only recommended for Windows and Mac"  
-
-        printf "\n\n  Status:  /sys/module/kvm/parameters/ignore_msrs = Y   Default = %s"  "$KVM_MSR_default"
-
-        MSR_offer="N"
-
-        select_msr_config
-
-      fi
-
-    fi
+    msrs_conflict_check_resolver
 
   fi
 
@@ -2774,29 +2841,6 @@ function_Select_VM () {
 }
 
 
-print_kvm_status () {
-
-  KVM_MSR_status="$(cat /sys/module/kvm/parameters/ignore_msrs)"
-
-  if [[ $KVM_MSR_status == "Y" ]] ; then  
-  
-    printf "\n\n  KVM:  /sys/module/kvm/parameters/ignore_msrs  = Y" 
-
-    [[ $VM_InstanceName ]] && [[ "$VM_InstanceName" != *windows* && "$VM_InstanceName" != *macos* ]] && printColor "  ERROR " 
-
-    printf "\n"
-    
-  else 
-
-    printf "\n\n  KVM:  /sys/module/kvm/parameters/ignore_msrs  = N" 
-
-    [[ $VM_InstanceName ]] && [[ "$VM_InstanceName" == *windows* || "$VM_InstanceName" == *macos* ]] && printColor "  ERROR " 
-
-    printf "\n"
-
-  fi
-
-}
 
 
 KDE_ctrl_c_msg () {
@@ -2968,6 +3012,14 @@ function show_quickemu_mod_help {
     fi
 }
 
+show_qmod_title() {
+
+  printColor "\n\n  Quickemu Mod - Virtual Machine Launcher  Version %s"  "$VERSION"
+
+  printf "\n\n  A menu interfaced version of quickemu ..... \n\n"    
+
+}
+
 
 function_show_main_menu_header () {
 
@@ -2979,11 +3031,11 @@ function_show_main_menu_header () {
 
     [[ $InstancePID ]] && [[ ! $( ps -p "$InstancePID" --no-headers ) ]] && InstancePID=
 
-    [[ ! $InstancePID ]] && printf "\033c"
+    [[ ! $InstancePID ]] && printf "\033c"  && show_qmod_title
  
-    printf "\n\n"
+    printf "\n"
 
-    printColor "  VM:   %s " "$VM_InstanceName" 
+    printColor "    %s " "$VM_InstanceName" 
 
     if [[ "$(pwd)" == "$Default_VM_Folder" ]]; then printf "  @   %s"  "$VM_Conf_Dir"
 
@@ -2991,7 +3043,7 @@ function_show_main_menu_header () {
 
     fi
 
-    print_kvm_status
+    [[ $KVM_MSR_Error ]] && print_kvm_status
 
   fi
 
@@ -3055,6 +3107,8 @@ else
 
     # Selection now made, array not needed, unless reselecting, so set bypass flags for now
 
+    # Path is both checked & becomes set by 'function_Select_VM'
+
     ByPass_VM_Array_Checker=1
 
     ByPass_VM_Array_Selector=1
@@ -3063,10 +3117,7 @@ else
 
   printf "\033c"
 
-  printColor "\n\n  Quickemu Mod - Virtual Machine Launcher  Version %s"  "$VERSION"
-
-  printf "\n\n  A menu interfaced version of quickemu ..... \n\n"    
-
+  show_qmod_title
 
   MultiInstanceError="$(pgrep -c 'quickemu-mod')"
 
@@ -3125,9 +3176,7 @@ else
 
         else
 
-          printf "\n\n  %s is now shut down\n\n" "$VM_InstanceName" 
-
-          KillPID_Menu_Exited=
+          printf "\n\n    %s is now shut down" "$VM_InstanceName" 
 
         fi
       
@@ -3137,37 +3186,57 @@ else
 
     if [[ ! $MainMenuChoice ]]; then
 
-      if [[ $VerboseArgs ]]; then printf  "\n\n  [v]   cancel verbose qemu args, change to just using the log file"	
+      [[ $KVM_MSR_Error ]] && printf  "\n\n  [m] toggle msrs "
 
-      else  printf  "\n\n  [v]   show verbose qemu args before booting, change from log file only"	; fi
+      printf  "\n\n\n  [vm]  reselect "
 
-      printf  "\n\n  [xa]  add extra qemu args  [m] toggle msrs "
+
       
-      [[ $EXTRA_ARGS ]] && printf  "   Current Extra: \n\n  %s"  "$EXTRA_ARGS"
+      if [[ $ShowUtilsMenu ]]; then
 
-      printf "\n\n  [set] open settings file in text editor "
+        print_kvm_status
 
-      printf "\n"
+        if [[ $VerboseArgs ]]; then printf  "\n\n  [v]   hide verbose qemu args"	
 
-      printf  "\n\n  [vm]  reselect VM"
+        else  printf  "\n\n  [v]   show verbose qemu args before booting"	; fi
 
-      printf  "\n\n  [sl]  list snapshots"
+        printf  "\n\n  [xa]  add extra qemu args  [m] toggle msrs "
 
-      printf  "\n\n  [sc]  create snapshot"
+        printf  "\n\n  [u]   hide utils & technical"
       
-      printf  "\n\n  [sa]  apply a snapshot"
+        [[ $EXTRA_ARGS ]] && printf  "   Current Extra: \n\n  %s"  "$EXTRA_ARGS"
 
-      printf  "\n\n  [sd]  delete a snapshot"
+        printf "\n"
+
+      else
+
+        printf  "  [u]  show utils & technical"
+
+      fi
+
+      printf  "\n\n  [sl]  list   [sc]  create   [sd]  delete   [sa]  apply    snapshots "
 
       printf "\n"
 
-      printColor  "\n\n  [d]   start with default sdl display (useful for update re-starts)"
+      if [[ $KillPID_Menu_Exited ]]; then
 
-      printColor 	"\n\n  [s]   start with spice display (scaleable) "  
+        printColor  "\n\n  [d]   re-start with default sdl display (useful for update re-starts)"
+
+        printColor 	"\n\n  [s]   re-start with spice display (scaleable) "  
+
+        KillPID_Menu_Exited=
+
+      else
+
+        printColor  "\n\n  [d]   start with default sdl display (useful for update re-starts)"
+
+        printColor 	"\n\n  [s]   start with spice display (scaleable) "  
+
+      fi
 
       printf "\n"
 
-      printf  "\n\n  [h]   show help & info "
+      printf  "\n\n  [h]   show help & info   [set] open settings file in text editor "
 
       printf  "\n\n  [q]   quit "
 
@@ -3178,17 +3247,19 @@ else
     fi
 
 
-    # ACTIONS: 
-
-
     # if verbose is true, then add detail
 
     [[ $VerboseArgs ]] && VerboseArgs="--show_args"
 
+    # ACTIONS: 
 
     if [[ $MainMenuChoice == "h" ]] ; then
 
       show_quickemu_mod_help
+
+    elif [[ $MainMenuChoice == "u" ]] ; then
+
+      if [[ ! $ShowUtilsMenu ]]; then ShowUtilsMenu=1 ; else ShowUtilsMenu= ; fi
 
     elif [[ $MainMenuChoice == "set" ]] ; then
 
@@ -3196,63 +3267,51 @@ else
 
     elif [[ $MainMenuChoice == "m" ]] ; then
 
-      show_kvm_sudo_security_note
-      
-      KVM_MSR_selector="h"
-
+      KVM_MSR_selector_LoadHelp=1
       select_msr_config
 
     elif [[ $MainMenuChoice == "d" ]] ; then 
 
       printf "\n\n"
 
-      quickemu -vm "$VM_Conf_File"  "$VerboseArgs"  
-        
-      printf "  SDL: Use guest based display resize. Avoid resizing with the host mouse ...\n\n"
+      if [[ $VerboseArgs ]]; then  quickemu -vm "$VM_Conf_File"  "$VerboseArgs" 
+
+      else quickemu -vm "$VM_Conf_File" ; fi
+
+      printf "\n  SDL: Use guest based display resize. Avoid resizing with the host mouse ...\n\n"
 
       function_KillPID_Menu
-    
           
     elif  [[ $MainMenuChoice == "s" ]] ; then
 
       printf "\n\n"
 
-      quickemu -vm "$VM_Conf_File" --display spice  "$VerboseArgs" 
+      if [[ $VerboseArgs ]]; then  quickemu -vm "$VM_Conf_File" --display spice  "$VerboseArgs" 
+
+      else quickemu -vm "$VM_Conf_File" --display spice  ; fi
 
       function_KillPID_Menu
-      
-        
+       
     elif  [[ $MainMenuChoice == "q" ]] ; then
 
       printf "\n\n"
-
       MainMenuChoice=
-
       break
-
       exit		
 
     elif  [[ $MainMenuChoice == "sl" ]] ; then
 
       function_snapshot_list
-
       printf "\n\n  [enter] to return to menu \n\n "
-      
       read -rp "  >  "  
-
     
     elif  [[ $MainMenuChoice == "sc" ]] ; then
 
       function_snapshot_list
-
       printColor "\n\n  Give [title] or [enter] for date only  [b] back to menu " 
-
       SnapTitle=
-
       printf "\n\n"
-
       read -rp "  >  "  SnapTitle
-      
       printf "\n\n"	
 
       [[ ! $SnapTitle ]] && SnapTitle="$(date +%b%d)"
@@ -3260,39 +3319,28 @@ else
       [[ $SnapTitle != "b" ]] && quickemu  -vm "$VM_Conf_File"  --snapshot create  "$SnapTitle"
 
       printf "\n\n  [enter] to return to menu \n\n "
-      
       read -rp "  >  "  
 
     elif  [[ $MainMenuChoice == "sd" ]] ; then
 
       printColor "\n\n Quickemu-Mod Snapshot Deletion:"
-
       function_snapshot_list
 
       # Create range-selectable array 
-
       SnapListString="$(function_snapshot_list | grep '[0-9][0-9]:')"
-
       mapfile -t SnapListArrRaw <<< "$SnapListString"
 
       i=0
-
       printColor "\n\n ID  Array  Name \n\n"
-
       while [[ "${SnapListArrRaw[$i]}" ]]; do
-
         IFS=' ' read -ra SnapListArrSeparated <<< "${SnapListArrRaw[$i]}"
-
         printf "%2d    %2d    %s \n"  "${SnapListArrSeparated[0]}"  "$i"  "${SnapListArrSeparated[1]}"
-
         ((i+=1))
-
       done
 
       SnapListArrTotal=$((i-1))
 
       printColor "\n\n Give ARRAY number 0 to %s of snapshot or start of snapshot range to delete"  "$SnapListArrTotal"
-
       printf "\n\n [enter] to return to main menu "
 
       SnapName=
@@ -3301,26 +3349,19 @@ else
       SnapDeleteConfirm=
       
       printf "\n\n"
-      
       read -rp " >  "  SnapDeleteStart
       
 
       if [[ $SnapDeleteStart ]]; then
 
           printColor "\n\n [enter] for individual snapshot  or  ARRAY [number] for end of range (inclusive) \n\n"
-
           read -rp " >  "  SnapDeleteEnd
 
           if [[ $SnapDeleteEnd ]]; then 
-          
             printf "\n Array Range = %s to %s " "$SnapDeleteStart"  "$SnapDeleteEnd"
-
           else         
-          
             printf "\n Delete = Array entry %s " "$SnapDeleteStart"  
-            
             SnapDeleteEnd="$SnapDeleteStart"
-
           fi
 
         printColor "\n\n [enter] to continue  [b] back to main menu \n\n"
@@ -3337,33 +3378,22 @@ else
           SnapDeleteRangeCounter=$SnapDeleteStart
 
           while [[ $SnapDeleteRangeCounter -le $SnapDeleteEnd ]]; do
-
             IFS=' ' read -ra SnapListArrSeparated <<< "${SnapListArrRaw[$SnapDeleteRangeCounter]}"
-
             SnapName="${SnapListArrSeparated[1]}"
 
             if [[ ! $SnapName ]]; then
-
               printColor "\n\n ERROR with SnapShot Array List \n\n"
-
               exit 1
-
             else
-
               printColor "\n\n Deleting SnapShot %2d   %2d  %s \n\n"  "${SnapListArrSeparated[0]}"  "$SnapDeleteRangeCounter"  "${SnapListArrSeparated[1]}"
-            
               quickemu  -vm "$VM_Conf_File"  --snapshot delete  "$SnapName"
-
             fi
-
             ((SnapDeleteRangeCounter+=1))
-
           done
 
         fi
 
         printf "\n\n [enter] to return to menu \n\n "
-      
         read -rp " >  "  
 
       fi
@@ -3378,15 +3408,11 @@ else
     elif  [[ $MainMenuChoice == "sa" ]] ; then
 
       function_snapshot_list
-
       printColor "\n\n  Give number of snapshot to use  [enter] to return to menu "
-      
       SnapNumber=
       
       printf "\n\n"
-      
       read -rp "  >  "  SnapNumber
-      
       printf "\n\n"	
 
       if [[ $SnapNumber ]]; then
@@ -3394,7 +3420,6 @@ else
         quickemu -vm "$VM_Conf_File"  --snapshot apply  "$SnapNumber"
 
         printf "\n\n  May take a moment .... \n\n"
-
         printColor "\n\n  Snapshot %s has been applied. \n\n"  "$SnapNumber "
 
       fi
@@ -3418,36 +3443,19 @@ else
       MenuXA_Correct=
 
       printColor "\n\n  Give extra qemu arguments to use "
-
-      printf "\n\n  Format = \"group quoted\" with single-space separated elements eg:"
-      
-      printf "\n\n  -device tpm-tis,tpmdev=tpm0 \n\n"
-
+      printf     "\n\n  Format = \"group quoted\" with space separated elements "
+      printf     "\n\n  eg.  -device  tpm-tis,tpmdev=tpm0 \n\n"
       read -rp "  > "  MenuXA
 
       printf "\n\n  %s %s"  "$EXTRA_ARGS" " $MenuXA"
 
       printf "\n\n  Is this correct y/n ? \n\n"
-
       read -rp "  >  "  MenuXA_Correct
 
       [[ $MenuXA_Correct != "n" ]] &&  EXTRA_ARGS="$EXTRA_ARGS $MenuXA"
 
       printf "\033c\n\n"
 
-    else
-
-      [[ ! $SelectArrayError ]] && printf "\n  Select: \n"
-
-    fi
-
-    if [[ ! $SelectArrayError ]]; then
-  
-      printf "\n"
-
-      printColor "  VM:   %s " "$VM_InstanceName" 
-
-      printf "  @   %s"  "$VM_Conf_Dir" 
 
     fi
 

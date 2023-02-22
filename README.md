@@ -7,7 +7,7 @@ New added fixes & features.
 
 Easy Snapshots. Very configurable, MSRS toggle, Windows Hypervisor Recipes ... 
 
-![Screenshot at 2023-02-19 10-06-08](https://user-images.githubusercontent.com/3956806/219939020-f3d8c512-4366-4186-8979-eebc879ed2aa.png)
+![Screenshot at 2023-02-22 12-59-04-1920](https://user-images.githubusercontent.com/3956806/220619057-f63883d2-4d0d-4130-94e1-d444f1567be4.jpg)
 
 
 Use along-side original quickemu or as a drop-in replacement.  

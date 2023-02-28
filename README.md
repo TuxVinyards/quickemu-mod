@@ -9,37 +9,37 @@ Easy Snapshots. Very configurable, MSRS toggle, Windows Hypervisor Recipes ...
 
 ![Screenshot at 2023-02-22 12-59-04-1920](https://user-images.githubusercontent.com/3956806/220619057-f63883d2-4d0d-4130-94e1-d444f1567be4.jpg)
 
-
 Use along-side original quickemu or as a drop-in replacement.  
 
-
-## Install
-
-Download the qmod zip to your VMs folder.  
-
-The simplest method is just to place files quickemu-mod & qmod_settings next to your VM .conf files.
-
-Make sure you have given the scripts "allow executing" +x permissions.  Click and go. 👍
-
-
-![Screenshot at 2023-02-19 10-27-48](https://user-images.githubusercontent.com/3956806/219940371-fb1b778c-3bbc-4739-bdad-caee87a29d18.jpg)
-
-The initial set up should be with the original quickemu as normal.  https://github.com/quickemu-project/quickemu
-
-Read the qmod main file & settings file for further details on location tweaks and other features.
-
-Your file manager may need setting to 'ask each time' in the behaviour section.  Some desktops will be slightly different ...
-
-
-![Screenshot at 2023-02-19 10-30-38](https://user-images.githubusercontent.com/3956806/219940035-9d4df156-8309-4845-8432-05941749dda1.png)
-
-Terminal screen width can usually be adjusted in the profile settings.
+Select VM from a multi-folder list: 
 
 ![term-tweak](https://user-images.githubusercontent.com/3956806/219943219-ddbe3547-bcd6-4d48-afb0-b549c4810a9c.png)
 
-Click on the 'Code' button, then 'Download ZIP'
+## Install
 
-![Screenshot at 2023-02-21 10-49-29-560](https://user-images.githubusercontent.com/3956806/220318265-e05b5f26-54b6-49e7-bc60-79df14b08a89.png)
+The initial set up should be with the original quickemu as normal.  https://github.com/quickemu-project/quickemu
+
+Click here on the 'Code' button, then 'Download ZIP'
+
+![Screenshot at 2023-02-21 10-49-29-560](https://user-images.githubusercontent.com/3956806/220318265-e05b5f26-54b6-49e7-bc60-79df14b08a89.png) 
+
+The simplest method is just to place files quickemu-mod & qmod_settings next to your VM .conf files.
+
+Click and go. 👍
+
+![Screenshot at 2023-02-19 10-30-38](https://user-images.githubusercontent.com/3956806/219940035-9d4df156-8309-4845-8432-05941749dda1.png)
+
+Read the qmod main file & settings file for further details on location and other features.
+
+
+## Tweaks
+
+Make sure you have given the scripts "allow executing" +x permissions.  
+
+![Screenshot at 2023-02-19 10-27-48](https://user-images.githubusercontent.com/3956806/219940371-fb1b778c-3bbc-4739-bdad-caee87a29d18.jpg)
+
+Your file manager may need setting to 'ask each time' in the behaviour section.  Some desktops will be slightly different ...
+
 
 
 ## Issues & Pull Requests

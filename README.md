@@ -5,7 +5,7 @@ Quickemu Mod - Virtual Machine Launcher  -  A menu interfaced version of quickem
 
 Added fixes & features:
 
-- Manage multiple snapshots. Recover Disk Space. 
+- Manage multiple snapshots across range entries & recover disk space.  
 - Toggle boot-up & temporary MSRS's 
 - Fix problems from quickemu upgrades & Windows booting 
 - Graphical style interface 

@@ -2342,7 +2342,9 @@ toggle_msr_defaults () {
 
   else
 
-    printf "\n\n  Configure default, load-up, KVM behaviour for unhandled machine-specific registers"
+    printColor "\n\n  Configure default, boot-up, KVM behaviour "
+    
+    printf "for unhandled machine-specific registers"
 
     printf "\n\n  Normal setting is N (don't ignore) but Windows and MacOS require Y (true) 'ignore' "
 
@@ -2399,14 +2401,14 @@ toggle_msr_defaults () {
 
 show_kvm_sudo_security_note () {
 
-  printf     "\n  QuickEmu-Mod requires 'sudo' permissions to echo true or false to 'ignore_msrs'"
+  printColor     "\n  QuickEmu-Mod requires 'sudo' permissions to echo true or false to 'ignore_msrs'"
   
   printf   "\n\n  This allows you to create a temporary MSRS status that may be changed at any time,"
   
   printf   "\n\n  allowing you to match the selected guest VM that you want to run."
 
   
-  printf "\n\n\n  If you have concerns about this script, or about giving elevated permissions, "
+  printColor "\n\n\n  If you have concerns about this script, or about giving elevated permissions, "
   
   printf   "\n\n  then the script should be checked or you should issue these commands manually:"
   
@@ -2417,7 +2419,7 @@ show_kvm_sudo_security_note () {
   printf   "\n\n  Return to q-mod & select 'leave as'.  Q-Mod will re-read msrs settings & auto-update. "
 
 
-  printf "\n\n\n  If you mainly use Windows or Mac VM's then a file '.../modprobe.d/kvm-quickemu.conf' "
+  printColor "\n\n\n  If you mainly use Windows or Mac VM's then a file '.../modprobe.d/kvm-quickemu.conf' "
   
   printf   "\n\n  can be created to modify the load up settings. Quickemu-Mod has a new built in function"
 
@@ -2425,8 +2427,10 @@ show_kvm_sudo_security_note () {
   
   printf   "\n\n  Or it may be carried out manually...  See settings, script & further notes for details."
  
-  printf "\n\n\n  Windows or MacOS should be set to 'Y' "
+  printColor "\n\n\n  Status:  /sys/module/kvm/parameters/ignore_msrs = %s   Current Default = %s"   "$KVM_MSR_status"  "$KVM_MSR_default"
  
+  printf "\n\n  Windows or MacOS should be set to 'Y' "
+
   printf   "\n"
   
 }
@@ -2437,19 +2441,20 @@ select_msr_config () {
   # MSR_offer normally present if MSRS/OS conflict previously detected, 
   # however, presume selector is being used to change current status  REVIEW 
 
-  print_kvm_status
+  function_find_kvm_msr_default_and_status
+
   if [[ $KVM_MSR_status == "Y" ]]; then MSR_offer="N" ; else MSR_offer="Y" ; fi
 
   KVM_MSR_selector=
 
-  [[ $KVM_MSR_selector_LoadHelp ]] && show_kvm_sudo_security_note  &&  print_kvm_status
+  [[ $KVM_MSR_selector_LoadHelp ]] && show_kvm_sudo_security_note  
 
 
   while true ; do
 
     if [[ $MSR_offer == "Y" ]]; then
 
-      printf "\n\n  Set Y : echo 1 | sudo /sys/module/kvm/parameters/ignore_msrs ? "
+      printf "\n\n  Set Y : echo 1 | sudo tee /sys/module/kvm/parameters/ignore_msrs ? "
 
       printColor "\n\n  [y] to set Y "
 
@@ -2457,7 +2462,7 @@ select_msr_config () {
 
     else
 
-      printf "\n\n  Set N : echo 0 | sudo /sys/module/kvm/parameters/ignore_msrs ? "
+      printf "\n\n  Set N : echo 0 | sudo tee /sys/module/kvm/parameters/ignore_msrs ? "
 
       printColor "\n\n  [n] to set N "
 
@@ -2475,7 +2480,9 @@ select_msr_config () {
     
     printf "\n"
 
-    [[ ! $KVM_MSR_selector ]]  &&  break   
+    [[ ! $KVM_MSR_selector ]]  &&  break  
+
+    [[ $KVM_MSR_selector == "y" && $MSR_offer == "N" ]] || [[ $KVM_MSR_selector == "n" && $MSR_offer == "Y" ]] && break
 
     if [[ $KVM_MSR_selector == "y" ]] || [[ $KVM_MSR_selector == "n" ]]; then   
 
@@ -3307,14 +3314,14 @@ else
     
     elif  [[ $MainMenuChoice == "sc" ]] ; then
 
-      function_snapshot_list
-      printColor "\n\n  Give [title] or [enter] for date only  [b] back to menu " 
-      SnapTitle=
-      printf "\n\n"
-      read -rp "  >  "  SnapTitle
-      printf "\n\n"	
+    function_snapshot_list
+    printColor "\n\n  Give [title] or [enter] for date.time  [b] back to menu " 
+    SnapTitle=
+    printf "\n\n"
+    read -rp "  >  "  SnapTitle
+    printf "\n\n"	
 
-      [[ ! $SnapTitle ]] && SnapTitle="$(date +%b%d)"
+      [[ ! $SnapTitle ]] && SnapTitle="$(date +%b%d.%R)"
       
       [[ $SnapTitle != "b" ]] && quickemu  -vm "$VM_Conf_File"  --snapshot create  "$SnapTitle"
 

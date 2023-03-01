@@ -1,11 +1,18 @@
-# quickemu-mod
+# quickemu-mod  / quickemu-tools
 Quickemu Mod - Virtual Machine Launcher  -  A menu interfaced version of quickemu.
 
 ### Combines the benefits of the command line with the ease of the graphical.
 
-New added fixes & features. 
+Added fixes & features:
 
-Easy Snapshots. Very configurable, MSRS toggle, Windows Hypervisor Recipes ... 
+- Manage multiple snapshots. Recover Disk Space. 
+- Toggle boot-up & temporary MSRS's 
+- Fix problems from quickemu upgrades & Windows booting 
+- Graphical style interface 
+- Full technical output with optional extra diagnostics 
+- Easy customising
+
+Choice of just the tool set, or the full modded run-time.
 
 ![Screenshot at 2023-02-22 12-59-04-1920](https://user-images.githubusercontent.com/3956806/220619057-f63883d2-4d0d-4130-94e1-d444f1567be4.jpg)
 
@@ -28,6 +35,20 @@ The simplest method is just to place files quickemu-mod & qmod_settings next to 
 Click and go. 👍
 
 ![Screenshot at 2023-02-19 10-30-38](https://user-images.githubusercontent.com/3956806/219940035-9d4df156-8309-4845-8432-05941749dda1.png)
+
+Or add files straight to the system so they can be called straight from the terminal:
+```
+sudo cp quickemu-mod /usr/bin qmod
+
+cp qmod_settings $HOME/.qmod_settings
+
+# For just the tools set:
+
+sudo cp quickemu-tools /usr/bin qtools
+
+```
+
+![quickemu-tools-ui](https://user-images.githubusercontent.com/3956806/222104440-7f347c2a-d912-4c54-aa24-e38fa05e61a7.png)
 
 Read the qmod main file & settings file for further details on location and other features.
 

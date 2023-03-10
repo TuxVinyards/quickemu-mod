@@ -1060,10 +1060,33 @@ function vm_boot() {
     VIDEO="${VIDEO},xres=${X_RES},yres=${Y_RES}"
   fi
 
-  # Allocate VRAM to VGA devices
-  case ${DISPLAY_DEVICE} in
+  #  MOD  https://qemu.readthedocs.io/en/latest/search.html?q=xres&check_keywords=yes&area=default
+
+  #  'xres' finds nothing ??
+
+  #   Try here ?  https://qemu.readthedocs.io/en/latest/system/invocation.html#hxtool-3
+
+  #  https://wiki.archlinux.org/title/QEMU#qxl 
+
+  # https://wiki.archlinux.org/title/QEMU/Guest_graphics_acceleration
+
+  # https://wiki.archlinux.org/title/QEMU#SPICE
+
+  #  Or is this a MATE issue only?   https://github.com/mate-desktop/mate-settings-daemon/issues/78  
+
+  #  https://github.com/freedesktop/spice-gtk/blob/master/tools/spicy.c
+
+  #  https://www.spice-space.org/spice-user-manual.html
+
+
+
+  # Allocate VRAM to VGA devices   MOD try bigger amounts for Windows
+    case ${DISPLAY_DEVICE} in
     bochs-display) VIDEO="${VIDEO},vgamem=67108864";;
-    qxl|qxl-vga) VIDEO="${VIDEO},ram_size=65536,vram_size=65536,vgamem_mb=64";;
+    #qxl|qxl-vga) VIDEO="${VIDEO},ram_size=65536,vram_size=65536,vgamem_mb=64";;
+    #qxl|qxl-vga) VIDEO="${VIDEO},ram_size=131072,vram_size=131072,vgamem_mb=128";;
+    qxl|qxl-vga) VIDEO="${VIDEO},ram_size=262144,vram_size=262144,vgamem_mb=256";;
+    #qxl|qxl-vga) VIDEO="${VIDEO},ram_size=524288,vram_size=524288,vgamem_mb=512";;
     ati-vga|cirrus-vga|VGA) VIDEO="${VIDEO},vgamem_mb=64";;
   esac
 
@@ -1077,6 +1100,7 @@ function vm_boot() {
   # allows seamless mouse in macOS when using the qxl-vga device.
   # https://www.collabora.com/news-and-blog/blog/2021/11/26/venus-on-qemu-enabling-new-virtual-vulkan-driver/
   # https://github.com/quickemu-project/quickemu/issues/222
+
   VGA="-vga none"
 
   # Add fullscreen options
@@ -2593,6 +2617,12 @@ function_conf_error () {
   else printf "\n\n  Please check the settings and re-run this script ... \n\n" ; fi
   
   if [[ "$1" == 'QMOD COMMAND'* ]]; then printColor "\n\n  [q] to quit \n\n"
+
+  elif [[ $1 == "folder" ]] && [[ $(ls "$VM_InstanceName"/*.iso 2> /dev/null) ]]; then 
+   
+    printColor "\n\n  [i] ignore, this is a new setup ...  [q] to quit"
+
+    printf "   [Enter] to edit the settings \n\n"
     
   else   printColor "\n\n  [Enter] to edit the settings   [q] to quit \n\n" ; fi
 
@@ -2600,7 +2630,13 @@ function_conf_error () {
 
   [[ $REPLY == "q" ]] && printf "\n\n" && command exit 
 
-  qmod_edit_settings
+  if [[ $REPLY == "i" ]]; then  
+  
+    SelectArrayError=
+
+    IgnoreFolderCheck=1
+  
+  else  qmod_edit_settings  ; fi
 
 }
 
@@ -2807,14 +2843,23 @@ function_Select_VM () {
 
     # VM_QCOW_Dir="$VM_Conf_Dir/$VM_InstanceName"
 
-    # check that the dir contains the right files  &&  grep .conf for right content
 
-    [[ ! $(ls "$VM_InstanceName"/*.qcow2 2> /dev/null) ]] && function_conf_error  "folder"  && SelectArrayError=1
+    # Check that the dir contains the right files  &&  grep .conf for right content
+
+    if [[ $IgnoreFolderCheck ]]; then
+
+      IgnoreFolderCheck=
+
+    else
+
+      [[ ! $(ls "$VM_InstanceName"/*.qcow2 2> /dev/null) ]] && function_conf_error  "folder"  && SelectArrayError=1
+
+    fi
 
     ! grep -q 'guest_os=' "$VM_Conf_File" && function_conf_error  ".conf file"   && SelectArrayError=1
   
 
-    ## Check KVM parameter settings & advise according to guest OS
+    # Check KVM parameter settings & advise according to guest OS
 
     KVM_MSR_selector=
 
@@ -3281,9 +3326,7 @@ else
 
       printf "\n\n"
 
-      if [[ $VerboseArgs ]]; then  quickemu -vm "$VM_Conf_File"  "$VerboseArgs" 
-
-      else quickemu -vm "$VM_Conf_File" ; fi
+      eval quickemu "-vm $VM_Conf_File  $VerboseArgs" 
 
       printf "\n  SDL: Use guest based display resize. Avoid resizing with the host mouse ...\n\n"
 
@@ -3293,9 +3336,11 @@ else
 
       printf "\n\n"
 
-      if [[ $VerboseArgs ]]; then  quickemu -vm "$VM_Conf_File" --display spice  "$VerboseArgs" 
+      eval quickemu "-vm $VM_Conf_File --display spice  $VerboseArgs" 
 
-      else quickemu -vm "$VM_Conf_File" --display spice  ; fi
+      #  --fullscreen  fails
+
+      #  https://qemu.readthedocs.io/en/latest/system/invocation.html#hxtool-3
 
       function_KillPID_Menu
        

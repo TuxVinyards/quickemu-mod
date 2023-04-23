@@ -19,14 +19,14 @@ Select VM from a multi-folder list:
 - Full & extra diagnostics
 - Easy customising
 
-### qTools: No more typing one by one snapshot commands
+### qTools: Automates the one by one commands
 
 - Manages multiple snapshots
 - Toggles boot-up & temporary MSRS's
 
 Recover gigabytes of qcow storage in moments with snapshot range selection.
 
-![quickemu-tools-ui](https://user-images.githubusercontent.com/3956806/222104440-7f347c2a-d912-4c54-aa24-e38fa05e61a7.png)
+![quickemu-tools-ui](https://user-images.githubusercontent.com/3956806/233839490-52f03884-188c-4173-bc71-25184bbb3bad.png)
 
 ## Install
 

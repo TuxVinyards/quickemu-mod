@@ -36,13 +36,9 @@ Click on the 'Code' button, then 'Download ZIP'
 
 ![Screenshot at 2023-02-21 10-49-29-560](https://user-images.githubusercontent.com/3956806/220318265-e05b5f26-54b6-49e7-bc60-79df14b08a89.png)
 
-The simplest method is just to place files quickemu-mod & qmod_settings next to your VM .conf files.
+The simplest method is just to place files quickemu-mod & qmod_settings next to your VM .conf files.  Click and go.
 
-Click and go. 👍
-
-![Screenshot at 2023-02-19 10-30-38](https://user-images.githubusercontent.com/3956806/219940035-9d4df156-8309-4845-8432-05941749dda1.png)
-
-Or add files straight to the system so they can be called straight from the terminal:
+Alternatively, add the files to the system so they can be called straight from the terminal:
 
 ```bash
 sudo cp quickemu-mod /usr/bin qmod
@@ -70,6 +66,8 @@ Make sure you have given the scripts "allow executing" +x permissions.
 
 Your file manager may need setting to 'ask each time' in the behaviour section.  Some desktops will be slightly different ...
 
+![Screenshot at 2023-02-19 10-30-38](https://user-images.githubusercontent.com/3956806/219940035-9d4df156-8309-4845-8432-05941749dda1.png)
+
 ## Pull Requests
 
 Please make any pull requests annotated. Explain how the code works so everyone can follow what's going on.
@@ -82,6 +80,6 @@ No densely packed lines of unexplained regex style hieroglyphics, please.
 
 Global shellcheck supression to help with all the 'args' warnings that come from the original quickemu code has now been moved to the file header.
 
-I have found a way to get a full wrapping script that still gives a menu interface and allows modding.  I hope to put this up before long ...
+I have found a way to get a full wrapping script that still gives a menu interface and allows modding & hope to put this up before long.
 
 😃

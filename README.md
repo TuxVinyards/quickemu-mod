@@ -2,22 +2,14 @@
 
 ## Choose the full modded run-time, or just the tool set
 
-Both with easy install
-
-![Screenshot at 2023-02-22 12-59-04-1920](https://user-images.githubusercontent.com/3956806/220619057-f63883d2-4d0d-4130-94e1-d444f1567be4.jpg)
-
-Use along-side original quickemu or as a drop-in replacement.  
-
-Select VM from a multi-folder list:
-
-![term-tweak](https://user-images.githubusercontent.com/3956806/219943219-ddbe3547-bcd6-4d48-afb0-b549c4810a9c.png)
-
 ### Command line power with graphical ease
 
 - Simple mouse click start
 - Improves Windows boot up
 - Full & extra diagnostics
-- Easy customising
+- Easy customising & installation
+
+![Screenshot at 2023-02-22 12-59-04-1920](https://user-images.githubusercontent.com/3956806/220619057-f63883d2-4d0d-4130-94e1-d444f1567be4.jpg)
 
 ### qTools: Automates the one by one commands
 
@@ -27,6 +19,12 @@ Select VM from a multi-folder list:
 Recover gigabytes of qcow storage in moments with snapshot range selection.
 
 ![quickemu-tools-ui](https://user-images.githubusercontent.com/3956806/233839490-52f03884-188c-4173-bc71-25184bbb3bad.png)
+
+Use along-side original quickemu or as a drop-in replacement.  
+
+Select VM from a multi-folder list:
+
+![term-tweak](https://user-images.githubusercontent.com/3956806/219943219-ddbe3547-bcd6-4d48-afb0-b549c4810a9c.png)
 
 ## Install
 

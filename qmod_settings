@@ -5,7 +5,7 @@
 # 	licence:  GPL3   https://www.gnu.org/licenses 
 
 
-## Settings file for 'quickemu-mod' & 'quickget-mod'   2023.02   beta 1
+## Settings file for 'quickemu-mod'   2023-05
 
 
   # Default location of the settings script is either "$HOME" or a userland VM folder where 'quickemu-mod' has been placed.
@@ -66,6 +66,7 @@ X_Shade="3"
 TextEditor=
 
 
+
 if [[ $1 == "QMOD" ]]; then
 
   # SET THE ASSOCIATIVE ARRAY with  ,0] as the discrete VM folder  &  ,1] as the .conf   
@@ -114,31 +115,71 @@ if [[ $1 == "QMOD" ]]; then
 
 
 
-  WinHyperV_RC=               #  Windows Hypervisor Recipe.  Leave blank for defaults.  
-
-  #                           #  Or edit / create / uncomment as needed. NB comma separated, no spaces.
-
-
-  # Quickemu 4.3/4.4/4.5 recipe:
-
-  # WinHyperV_RC="-cpu host,kvm=on,+hypervisor,+invtsc,l3-cache=on,migratable=no,hv_passthrough"
-
-  # Quickemu 4.2 (qemu ver 6.0) recipe (two lines):
-
-  # WinHyperV_RC="-cpu host,kvm=on,+hypervisor,+invtsc,l3-cache=on,migratable=no,hv_frequencies,kvm_pv_unhalt,hv_reenlightenment,"
-  # WinHyperV_RC+="hv_relaxed,hv_spinlocks=8191,hv_stimer,hv_synic,hv_time,hv_vapic,hv_vendor_id=1234567890ab,hv_vpindex"
 
   # See section 'WINDOWS & HYPERVISOR' in this script for more details.
 
+  WinHyperV_RC=               #  Windows Hypervisor Recipe.  Leave blank for defaults.  Otherwise, set "4.2" or "Custom" 
 
-  ## File for default KVM behaviour for unhandled machine-specific registers. ( REVIEW )
+  #                           #  Edit / create / uncomment as needed. NB comma separated, no spaces.
+
+  if [[ $WinHyperV_RC == "4.2" ]]; then
+
+    # Quickemu 4.2 (qemu ver 6.0) recipe (two lines):
+    WinHyperV_RC="-cpu host,kvm=on,+hypervisor,+invtsc,l3-cache=on,migratable=no,hv_frequencies,kvm_pv_unhalt,hv_reenlightenment,"
+    WinHyperV_RC+="hv_relaxed,hv_spinlocks=8191,hv_stimer,hv_synic,hv_time,hv_vapic,hv_vendor_id=1234567890ab,hv_vpindex"
+
+  elif [[ $WinHyperV_RC == "Custom" ]]; then
+
+    # Edit ... 
+    WinHyperV_RC="-cpu host,kvm=on,+hypervisor,+invtsc,l3-cache=on,migratable=no,hv_frequencies,kvm_pv_unhalt,hv_reenlightenment,"
+    WinHyperV_RC+="hv_relaxed,hv_spinlocks=8191,hv_stimer,hv_synic,hv_time,hv_vapic,hv_vendor_id=1234567890ab,hv_vpindex"
+
+  else
+
+    # Quickemu 4.3/4.4/4.5 etc recipe:
+
+    WinHyperV_RC="-cpu host,kvm=on,+hypervisor,+invtsc,l3-cache=on,migratable=no,hv_passthrough"
+
+    # From qemu docs hyperv ....  hv-passthrough overrides all other ‘hv-‘ settings on the command line. 
+    # Also, enabling this flag effectively prevents migration as the list of enabled enlightenments may differ between target and destination hosts.
+
+    # This above may account for VM's built with quickemu 4.2 not working with 4.3  ... ?  YMMV
+
+    # https://www.qemu.org/docs/master/system/i386/hyperv.html
+
+  fi
+
+  ## DRIVE TRIM & HARDWARE
   
-  #  Edit here if your OS locates 'modprobe.d' differently.  QMOD default is "/etc/modprobe.d/kvm-quickemu.conf"
+  # As noted in my comment https://github.com/quickemu-project/quickemu/issues/572#issuecomment-1313723715
 
-  KVM_MSR_ModProbeFile="/etc/modprobe.d/kvm-quickemu.conf"
+  # Qemu itself seems to automatically add TRIM to the virtual drive ie "discard=unmap"
+
+  # Ver 4.4 of quickemu added this as an instuction to the 'else' section which was picked up on by windows
+
+  # BUT it also changed the drive from blk to scsi. This is the change that caused the problems, not the unmap.
+
+  # @ 2023-05 following comment https://github.com/quickemu-project/quickemu/issues/572#issuecomment-1530824872
+
+  # it seemed right, for completeness, to add some more options to this section.
+
+  ## Windows & All non-specified OS's 
+
+  IgnoreTRIM=      #  Set =1  to not send the unmap command to Qemu  (although it's probably done internally anyway)
+
+  ## All non-specified OS's  But NOT Windows. In qmod this set as 'virtio-blk' to avoid the 4.4 problems
+
+  Default_SCSI=    #  If not specified, will use 'virtio-blk' as per ver 4.3 & 4.5 etc   Set =1 to use SCSI as 4.4.
 
 
 fi
+
+
+## File for default KVM behaviour for unhandled machine-specific registers. 
+
+#  Edit here if your OS locates 'modprobe.d' differently.  QMOD default is "/etc/modprobe.d/kvm-quickemu.conf"
+
+KVM_MSR_ModProbeFile="/etc/modprobe.d/kvm-quickemu.conf"
 
 
 ## End of Settings

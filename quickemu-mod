@@ -93,7 +93,7 @@ fi
 declare -gA VM_Array=()
 
 
-# Load Settings & Array Presets  (flag QMOD)
+# Load Settings & Array Presets  (flag QMOD_1  Version 1 has the Windows Recipes)
 
 if [[ -e "$Q_Mod_SettingsFile" ]]; then
 
@@ -144,6 +144,9 @@ fi
 
 
 LAUNCHER="$(basename "$0")"
+
+ModName="$LAUNCHER"  
+
 DISK_MIN_SIZE=$((197632 * 8))
 
 
@@ -1088,13 +1091,25 @@ function vm_boot() {
 
   #  https://www.spice-space.org/spice-user-manual.html
 
+  #  https://gitlab.com/qemu-project/qemu/-/issues/1423
 
+  #  https://bugs.launchpad.net/qemu/+bug/1452742  "the option for vdagent communication needed for qxl scren resizing is not documented "
+
+  #  https://gitlab.com/qemu-project/qemu/-/blob/master/qemu-options.hx
+
+  #  https://stackoverflow.com/questions/41990600/virt-manager-guest-resize-not-working
+  
 
   # Allocate VRAM to VGA devices   MOD try bigger amounts for Windows
     case ${DISPLAY_DEVICE} in
     bochs-display) VIDEO="${VIDEO},vgamem=67108864";;
     #qxl|qxl-vga) VIDEO="${VIDEO},ram_size=65536,vram_size=65536,vgamem_mb=64";;
     #qxl|qxl-vga) VIDEO="${VIDEO},ram_size=131072,vram_size=131072,vgamem_mb=128";;
+
+    #qxl|qxl-vga) VIDEO="${VIDEO},ram_size=262144,vram_size=262144,vgamem_mb=256";;
+    #
+    # try width here??
+
     qxl|qxl-vga) VIDEO="${VIDEO},ram_size=262144,vram_size=262144,vgamem_mb=256";;
     #qxl|qxl-vga) VIDEO="${VIDEO},ram_size=524288,vram_size=524288,vgamem_mb=512";;
     ati-vga|cirrus-vga|VGA) VIDEO="${VIDEO},vgamem_mb=64";;
@@ -1247,7 +1262,7 @@ function vm_boot() {
          -device intel-hda -device hda-duplex,audiodev=audio0
          -rtc base=localtime,clock=host,driftfix=slew)
 
-  # Only enable SPICE is using SPICE display
+  # Only enable SPICE if using SPICE display
   # shellcheck disable=SC2054
 
   if [ "${OUTPUT}" == "none" ] || [ "${OUTPUT}" == "spice" ] || [ "${OUTPUT}" == "spice-app" ]; then
@@ -1445,16 +1460,43 @@ function vm_boot() {
     # shellcheck disable=SC2054,SC2206
     args+=(-drive if=ide,index=0,media=disk,file="${disk_img}")
 
+
   elif [ "${guest_os}" == "windows" ]; then
-      # shellcheck disable=SC2054,SC2206
+
+    if [[ $IgnoreTRIM ]]; then
       args+=(-device virtio-blk-pci,drive=SystemDisk
            -drive id=SystemDisk,if=none,format=qcow2,discard=unmap,file="${disk_img}" ${STATUS_QUO})
+    else
+      args+=(-device virtio-blk-pci,drive=SystemDisk
+           -drive id=SystemDisk,if=none,format=qcow2,file="${disk_img}" ${STATUS_QUO})
+    fi
 
   else
-    # shellcheck disable=SC2054,SC2206
-    args+=(-device virtio-scsi-pci,id=scsi0
-          -device scsi-hd,drive=SystemDisk,bus=scsi0.0,lun=0,rotation_rate=1
-          -drive id=SystemDisk,if=none,format=qcow2,discard=unmap,file="${disk_img}" ${STATUS_QUO})
+
+    if [[ $Default_SCSI ]]; then
+
+      if [[ $IgnoreTRIM ]]; then
+        args+=(-device virtio-scsi-pci,id=scsi0
+              -device scsi-hd,drive=SystemDisk,bus=scsi0.0,lun=0,rotation_rate=1
+              -drive id=SystemDisk,if=none,format=qcow2,file="${disk_img}" ${STATUS_QUO})
+      else
+        args+=(-device virtio-scsi-pci,id=scsi0
+              -device scsi-hd,drive=SystemDisk,bus=scsi0.0,lun=0,rotation_rate=1
+              -drive id=SystemDisk,if=none,format=qcow2,discard=unmap,file="${disk_img}" ${STATUS_QUO})
+      fi
+
+    else
+
+      if [[ $IgnoreTRIM ]]; then
+        args+=(-device virtio-blk-pci,drive=SystemDisk
+              -drive id=SystemDisk,if=none,format=qcow2,file="${disk_img}" ${STATUS_QUO})
+      else
+        args+=(-device virtio-blk-pci,drive=SystemDisk
+              -drive id=SystemDisk,if=none,format=qcow2,discard=unmap,file="${disk_img}" ${STATUS_QUO})
+      fi
+
+    fi
+
   fi
 
   # https://wiki.qemu.org/Documentation/9psetup
@@ -1557,13 +1599,13 @@ function vm_boot() {
 
   # shellcheck disable=SC2054,SC2206
 
-  if [[ $EXTRA_ARGS ]]; then
+  if [[ $ExtraArgs ]]; then
 
       # UNquoted so that the args become separated 
       
       #  TEMP  (using std quickemu array method for now)
     
-      args+=($EXTRA_ARGS)
+      args+=($ExtraArgs)
   fi
 
   # The OSK parameter contains parenthesis, they need to be escaped in the shell
@@ -2347,15 +2389,27 @@ print_kvm_status () {
   
     printf "\n\n  KVM:  /sys/module/kvm/parameters/ignore_msrs  = Y" 
 
-    [[ $VM_InstanceName ]] && [[ $KVM_MSR_Error ]] && printColor "  ERROR " 
+    if [[ $VM_InstanceName ]] && [[ $KVM_MSR_Error ]]; then 
+    
+      if [[ "$VM_InstanceName" == *windows*  ]] ||	[[ "$VM_InstanceName" == *macos*  ]]; then printColor "  ERROR " 
 
-    printf "\n"
+      else printf "  WARNING " 
+
+      fi
+
+      printf "\n"
+      
+    fi
     
   else 
 
     printf "\n\n  KVM:  /sys/module/kvm/parameters/ignore_msrs  = N" 
 
-    [[ $VM_InstanceName ]] && [[ $KVM_MSR_Error ]] && printColor "  ERROR " 
+    if [[ "$VM_InstanceName" == *windows*  ]] ||	[[ "$VM_InstanceName" == *macos*  ]]; then printColor "  ERROR " 
+
+    else printf "  WARNING " 
+
+    fi
 
     printf "\n"
 
@@ -2598,7 +2652,7 @@ msrs_conflict_check_resolver() {
 
       printColor "\n\n  Selected: %s "  "$VM_InstanceName"
     
-      printf " 'ignore_msrs' is only recommended for Windows and Mac"  
+      printf " 'ignore_msrs' is recommended for Windows and Mac"  
 
       #printf "\n\n  Status:  /sys/module/kvm/parameters/ignore_msrs = Y   Default = %s"  "$KVM_MSR_default"
 
@@ -2620,31 +2674,52 @@ msrs_conflict_check_resolver() {
 
 function_conf_error () {
 
+  ErrorMenuSelect=
+
   printf "\n\n  ERROR  Quickemu-Mod  Settings, VM folder & conf file(s)"
 
   if [[ $1 ]] ; then printf "\n\n  Please check %s settings, location & content ... \n\n"  "$1"
 
   else printf "\n\n  Please check the settings and re-run this script ... \n\n" ; fi
   
-  if [[ "$1" == 'QMOD COMMAND'* ]]; then printColor "\n\n  [q] to quit \n\n"
+  if [[ "$1" == 'QMOD COMMAND'* ]]; then 
+  
+    printColor "\n\n  [q] to quit "
+
+    printf "  [enter] to view/edit settings file \n\n"
 
   elif [[ $1 == "folder" ]] && [[ $(ls "$VM_InstanceName"/*.iso 2> /dev/null) ]]; then 
    
-    printColor "\n\n  [i] ignore, this is a new setup ...  [q] to quit"
+    printColor "\n\n  [e] edit the new setup .conf file  [i] ignore ...  "
 
-    printf "   [Enter] to edit the settings \n\n"
+    [[ "$VM_InstanceName" =~ 'windows' ]] && printf "\n\n  128G disk size edit recommended, plus make sure tpm and secure boot are on"
+
+    printf "\\n\n  [Enter] to edit qmod general settings   [q] to quit \n\n"
     
-  else   printColor "\n\n  [Enter] to edit the settings   [q] to quit \n\n" ; fi
+  else   printColor "\n\n  [Enter] to edit qmod settings   [q] to quit \n\n" ; fi
 
-  read -rp "  >  "
+  read -rp "  >  "   ErrorMenuSelect
 
-  [[ $REPLY == "q" ]] && printf "\n\n" && command exit 
+  [[ $ErrorMenuSelect == "q" ]] && printf "\n\n" && command exit 
 
-  if [[ $REPLY == "i" ]]; then  
+  if [[ $ErrorMenuSelect == "i" ]] || [[ $ErrorMenuSelect == "e" ]]; then  
   
     SelectArrayError=
-
     IgnoreFolderCheck=1
+
+    if [[ $ErrorMenuSelect == "e" ]]; then 
+
+      printf "\n\n  If editing the 'hash bang' to 'mod' mode, use (UNquoted) the following pattern:"
+
+      printf "\n\n  #!/media/xxx/Files/quickemu-mod/quickemu-mod --vm-mod  ubuntu-mate-daily-live.conf  --path  /media/xxx/Files/VMQs "
+
+      printf "\n\n"
+
+      read -rp "  [enter] to continue  >  "
+    
+      qmod_edit_settings  "conf"
+
+    fi
   
   else  qmod_edit_settings  ; fi
 
@@ -2655,12 +2730,11 @@ function_Select_VM () {
 
   SelectArrayError=
 
-
   if [[ $ByPass_VM_Array_Checker ]]; then
 
     # ignore array check if API is supplying  "path/folder"  "file.conf"  as further checks are made
 
-    printf "\n\n  ByPassing VM_Array Checker ... "
+    printf "\n\n  ByPassing VM Loader ... "
 
   else 
 
@@ -2804,7 +2878,7 @@ function_Select_VM () {
 
   if [[ $ByPass_VM_Array_Selector ]] || [[ $SelectArrayError ]] ; then
 
-    printf "\n\n  ByPassing VM_Array Selector ... "
+    printf "\n\n  ByPassing VM Selector ... "
 
   else 
 
@@ -3022,25 +3096,32 @@ qmod_edit_settings() {
 
     # https://askubuntu.com/questions/1396739/failed-to-load-module-xapp-gtk3-module
 
-    "$TextEditor" "$Q_Mod_SettingsFile"  2> /dev/null 
+    if [[ $1 == "conf" ]]; then
 
-    SettingsFileAdjusted=1
+      "$TextEditor" "$VM_Conf_Dir/$VM_Conf_File"  2> /dev/null 
+
+    else 
+
+      "$TextEditor" "$Q_Mod_SettingsFile"  2> /dev/null 
+
+      SettingsFileAdjusted=1
+
+      # Re-Read settings file & QMOD sections:
+
+      # shellcheck disable=SC1090
+
+      . "$Q_Mod_SettingsFile"  QMOD
+
+      printf "\033c"
 
 
-    # Re-Read settings file & QMOD sections:
+      # Flag up for main loop to run/re-run the VM array checker/selector
 
-    # shellcheck disable=SC1090
+      Select_VM=1
 
-    . "$Q_Mod_SettingsFile"  QMOD
+      [[ $VM_InstanceName ]] &&  ByPass_VM_Array_Selector=1
 
-    printf "\033c"
-
-
-    # Flag up for main loop to run/re-run the VM array checker/selector
-
-    Select_VM=1
-
-    [[ $VM_InstanceName ]] &&  ByPass_VM_Array_Selector=1
+    fi
 
   else
 
@@ -3126,6 +3207,8 @@ if [[ $1 ]] && [[ "$1" != *-mod* ]]  && [[ "$1" != *menu ]]  ; then
 
   # run pre-mod quickemu by re-passing the CLI parameters to the new quickemu function
 
+  Select_VM=1
+
   quickemu "$@"
 
 else
@@ -3140,9 +3223,17 @@ else
 
     ##  API for .desktop starts  
 
-    #  --mod.menu | --vm-menu  | --vm-mod  "file.conf"  --path  "path/folder"   
+    #  --mod.menu | --vm-menu  | --vm-mod    "file.conf"  --path  "path/folder"   (NO quotes if placed in .conf folder)
 
-    while [[ $# -gt 0 ]]; do
+    #  IFS routine needed if started from a mouseclick on the .conf file (via a modded hash bang) 
+
+    #  &&   *) removes any extraneous parameters
+
+    IFS=' '  read -ra ModParamsArray <<< "$*"
+
+    set -- "${ModParamsArray[@]}"          
+
+    while [[ $1 ]]; do
 
       case "$1" in
 
@@ -3156,6 +3247,9 @@ else
           shift
           shift ;;
 
+        *) 
+          shift ;;
+
       esac
 
     done
@@ -3163,7 +3257,21 @@ else
 
     [[ ! $VM_Conf_Dir ]] && VM_Conf_Dir="$CurrentFolder"
 
-    [[ ! $VM_Conf_File ]] && function_conf_error  "QMOD COMMAND LINE Instruction,"
+    if [[ ! $VM_Conf_File ]]; then 
+
+      printColor "\n\n  %s  not found "  "$VM_Conf_File"
+    
+      function_conf_error  "QMOD COMMAND LINE Instruction,"
+
+    fi
+
+    if [[ ! $VM_Conf_Dir  ]]; then 
+
+      printColor "\n\n  %s  not found "  "$VM_Conf_Dir "
+    
+      function_conf_error  "QMOD COMMAND LINE Instruction,"
+
+    fi
 
     [[ ! -e  "$VM_Conf_Dir/$VM_Conf_File" ]] && function_conf_error  "QMOD COMMAND LINE Instruction,"
 
@@ -3181,9 +3289,9 @@ else
 
   show_qmod_title
 
-  MultiInstanceError="$(pgrep -c 'quickemu-mod')"
+  MultiInstanceCount="$(pgrep -c "$ModName")"
 
-  if [[ $MultiInstanceError -gt 1 ]]; then 
+  if [[ $MultiInstanceCount -gt 1 ]]; then 
 
     printColor "\n\n  ERROR more than one instance of q-mod is running \n\n"
 
@@ -3264,9 +3372,20 @@ else
 
         printf  "\n\n  [xa]  add extra qemu args  [m] toggle msrs "
 
+        #  TODO   add qcow2 resize  https://superuser.com/a/375847  ??
+
+        # OR maybe just notes, as: "You will then need to repartition and resize the existing partition(s) and filesystem(s) on the new image. 
+        
+        # One method of doing this is to boot gparted in QEMU with the gparted livecd iso and the new disk image.
+
+        # OR does not doing this give us more space for snapshots?
+
+        # https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/virtualization_administration_guide/chap-virtualization_administration_guide-tips_and_tricks#sect-Virtualization-Tips_and_tricks-Using_qemu_img
+
+
         printf  "\n\n  [u]   hide utils & technical"
       
-        [[ $EXTRA_ARGS ]] && printf  "   Current Extra: \n\n  %s"  "$EXTRA_ARGS"
+        [[ $ExtraArgs ]] && printf  "   Current Extra: \n\n  %s"  "$ExtraArgs"
 
         printf "\n"
 
@@ -3509,12 +3628,12 @@ else
       printf     "\n\n  eg.  -device  tpm-tis,tpmdev=tpm0 \n\n"
       read -rp "  > "  MenuXA
 
-      printf "\n\n  %s %s"  "$EXTRA_ARGS" " $MenuXA"
+      printf "\n\n  %s %s"  "$ExtraArgs" " $MenuXA"
 
       printf "\n\n  Is this correct y/n ? \n\n"
       read -rp "  >  "  MenuXA_Correct
 
-      [[ $MenuXA_Correct != "n" ]] &&  EXTRA_ARGS="$EXTRA_ARGS $MenuXA"
+      [[ $MenuXA_Correct != "n" ]] &&  ExtraArgs="$ExtraArgs $MenuXA"
 
       printf "\033c\n\n"
 

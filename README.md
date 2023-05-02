@@ -80,4 +80,9 @@ Global shellcheck supression to help with all the 'args' warnings that come from
 
 I have found a way to get a full wrapping script that still gives a menu interface and allows modding & hope to put this up before long.
 
+\@ 2023-05 following comment <https://github.com/quickemu-project/quickemu/issues/572#issuecomment-1530824872>
+for completeness, more options for TRIM and Hardware have been added to qmod
+
+Also qmod now has a .conf editor dialogue & PR #434 hash bang starts from a mouse click on the .conf are now possible.
+
 😃

@@ -14,7 +14,7 @@
 
 \@ 2023-05-15 Now available as a full wrapping script that still gives a menu interface and allows modding. This now replaces quickemu-tools as default to accompany quickemu original. Depending on your point of view, use it in a similar way to quickgui. But with more features. Start by mouse click on the .conf file:
 
-pic here
+![Screenshot at 2023-05-15 14-38-25](https://github.com/TuxVinyards/quickemu-mod/assets/3956806/1ef00a03-203e-4099-89f7-f5a703cbe920)
 
 qMod remains in place, mainly for use with difficult legacy quickemu 4.2 to 4.4 Windows loading problems.
 

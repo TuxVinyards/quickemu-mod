@@ -4,12 +4,20 @@
 
 ### Command line power with graphical ease
 
+- Replaces quickgui
 - Simple mouse click start
 - Improves Windows boot up
 - Full & extra diagnostics
 - Easy customising & installation
 
 ![Screenshot at 2023-02-22 12-59-04-1920](https://user-images.githubusercontent.com/3956806/220619057-f63883d2-4d0d-4130-94e1-d444f1567be4.jpg)
+
+\@ 2023-05-15 Now available as a full wrapping script that still gives a menu interface and allows modding. This now replaces quickemu-tools as default to accompany quickemu original. Depending on your point of view, use it in a similar way to quickgui. But with more features. Start by mouse click on the .conf file:
+
+pic here
+
+qMod remains in place, mainly for use with difficult legacy quickemu 4.2 to 4.4 Windows loading problems.
+
 
 ### qTools: Automates the one by one commands
 
@@ -76,9 +84,11 @@ No densely packed lines of unexplained regex style hieroglyphics, please.
 
 ## Changes
 
-Global shellcheck supression to help with all the 'args' warnings that come from the original quickemu code has now been moved to the file header.
+\@ 2023-05-15 I have found a way to get a full wrapping script that still gives a menu interface and allows modding. This now replaces quickemu-tools as default to accompany quickemu original. Depending on your point of view, use it in a similar way to quickgui. But with more features.
 
-I have found a way to get a full wrapping script that still gives a menu interface and allows modding & hope to put this up before long.
+I am leaving qMod in place, mainly for use with difficult legacy quickemu 4.2 to 4.4 Windows loading problems.
+
+Global shellcheck supression to help with all the 'args' warnings that come from the original quickemu code has now been moved to the file header.
 
 \@ 2023-05 following comment <https://github.com/quickemu-project/quickemu/issues/572#issuecomment-1530824872>
 for completeness, more options for TRIM and Hardware have been added to qmod

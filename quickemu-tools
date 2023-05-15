@@ -116,6 +116,8 @@ fi
 
 LAUNCHER="$(basename "$0")"  
 
+ModName="$LAUNCHER"
+
 
 if [[ ! $(type -p quickemu) ]]; then 
   echo "ERROR! QuickEmu not found. Please install."
@@ -204,15 +206,27 @@ print_kvm_status () {
   
     printf "\n\n  KVM:  /sys/module/kvm/parameters/ignore_msrs  = Y" 
 
-    [[ $VM_InstanceName ]] && [[ $KVM_MSR_Error ]] && printColor "  ERROR " 
+    if [[ $VM_InstanceName ]] && [[ $KVM_MSR_Error ]]; then 
+    
+      if [[ "$VM_InstanceName" == *windows*  ]] ||	[[ "$VM_InstanceName" == *macos*  ]]; then printColor "  ERROR " 
 
-    printf "\n"
+      else printf "  WARNING " 
+
+      fi
+
+      printf "\n"
+      
+    fi
     
   else 
 
     printf "\n\n  KVM:  /sys/module/kvm/parameters/ignore_msrs  = N" 
 
-    [[ $VM_InstanceName ]] && [[ $KVM_MSR_Error ]] && printColor "  ERROR " 
+    if [[ "$VM_InstanceName" == *windows*  ]] ||	[[ "$VM_InstanceName" == *macos*  ]]; then printColor "  ERROR " 
+
+    else printf "  WARNING " 
+
+    fi
 
     printf "\n"
 
@@ -567,30 +581,51 @@ else
 
   ##  API    --vm  "file.conf"   [ --path  "path/folder" ]   
 
-  #   where path to be used if .conf file not in current folder / present working directory
+  #   where path to be used if .conf file not in current folder / present working directory  (NO quotes if placed in .conf folder)
 
-  while [[ $# -gt 0 ]]; do
+    #  IFS routine needed if started from a mouseclick on the .conf file (via a modded hash bang) 
 
-    case "$1" in
+    #  &&   *) removes any extraneous parameters
 
-      -vm|--vm)
-        VM_Conf_File="$2" 
-        shift
-        shift ;;
+    IFS=' '  read -ra ModParamsArray <<< "$*"
 
-      --path|-path)
-        VM_Conf_Dir="$2"
-        shift
-        shift ;;
+    set -- "${ModParamsArray[@]}"          
 
-    esac
+    while [[ $1 ]]; do
 
-  done
+      case "$1" in
+        --vm)
+          VM_Conf_File="$2" 
+          shift
+          shift ;;
 
+        --path)
+          VM_Conf_Dir="$2"
+          shift
+          shift ;;
+        *) 
+          shift ;;
+      esac
 
-  [[ ! $VM_Conf_Dir ]] && VM_Conf_Dir="$CurrentFolder"
+    done
 
-  [[ ! $VM_Conf_File ]] && function_conf_error  "Qtools COMMAND LINE Instruction,"
+    [[ ! $VM_Conf_Dir ]] && VM_Conf_Dir="$CurrentFolder"
+
+    if [[ ! $VM_Conf_File ]]; then 
+
+      printColor "\n\n  %s  not found "  "$VM_Conf_File"
+    
+      function_conf_error  "Qtools COMMAND LINE Instruction,"
+
+    fi
+
+    if [[ ! $VM_Conf_Dir  ]]; then 
+
+      printColor "\n\n  %s  not found "  "$VM_Conf_Dir "
+    
+      function_conf_error  "Qtools COMMAND LINE Instruction,"
+
+    fi
 
   [[ ! -e  "$VM_Conf_Dir/$VM_Conf_File" ]] && function_conf_error  "Qtools COMMAND LINE Instruction,"
 
@@ -638,15 +673,33 @@ printf "\033c"
 
 show_qmod_title
 
-MultiInstanceError="$(pgrep -c 'quickemu-mod')"
+MultiInstanceCount="$(pgrep -c "$ModName")"
 
-if [[ $MultiInstanceError -gt 1 ]]; then 
+if [[ $MultiInstanceCount -gt 1 ]]; then 
 
   printColor "\n\n  ERROR more than one instance of q-tools is running \n\n"
 
   read -rp "  Close the other instances, then press [enter] to continue  > "
 
 fi
+
+check_instance_runtime() {
+
+  # https://www.qemu.org/docs/master/tools/qemu-img.html
+
+  InstancePID="$(pgrep "$VM_InstanceName")"
+
+  if [[ $InstancePID ]]; then 
+
+    printColor "\n\n  WARNING snapshots operations should NOT be carried out when VM running \n\n"
+
+    read -rp "  Close down the VM, then press [enter] to continue  > "
+
+  fi
+
+}
+
+check_instance_runtime
 
 # MAIN MENU  (select VM then choose actions to do)
 
@@ -704,12 +757,14 @@ while true ; do
 
   elif  [[ $MainMenuChoice == "sl" ]] ; then
 
+    check_instance_runtime
     function_snapshot_list
     printf "\n\n  [enter] to return to menu \n\n "
     read -rp "  >  "  
   
   elif  [[ $MainMenuChoice == "sc" ]] ; then
 
+    check_instance_runtime
     function_snapshot_list
     printColor "\n\n  Give [title] or [enter] for date.time  [b] back to menu " 
     SnapTitle=
@@ -727,6 +782,8 @@ while true ; do
   elif  [[ $MainMenuChoice == "sd" ]] ; then
 
     printColor "\n\n Quickemu-Tools Snapshot Deletion:"
+
+    check_instance_runtime
     function_snapshot_list
 
     # Create range-selectable array 
@@ -803,6 +860,7 @@ while true ; do
           
   elif  [[ $MainMenuChoice == "sa" ]] ; then
 
+    check_instance_runtime
     function_snapshot_list
     printColor "\n\n  Give number of snapshot to use  [enter] to return to menu "
     SnapNumber=

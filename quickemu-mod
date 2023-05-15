@@ -99,7 +99,7 @@ if [[ -e "$Q_Mod_SettingsFile" ]]; then
 
   # shellcheck disable=SC1090
 
- . "$Q_Mod_SettingsFile"  QMOD
+ . "$Q_Mod_SettingsFile"  QMOD 
 
 else
 

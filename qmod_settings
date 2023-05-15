@@ -5,7 +5,7 @@
 # 	licence:  GPL3   https://www.gnu.org/licenses 
 
 
-## Settings file for 'quickemu-mod'   2023-05
+## Settings file for 'quickemu-mod' & 'quickget-mod'   2023.02   late alpha / early beta 
 
 
   # Default location of the settings script is either "$HOME" or a userland VM folder where 'quickemu-mod' has been placed.
@@ -31,6 +31,18 @@
   # Adding a dot is recommended for any placement in the main $HOME folder
 
 
+## SET quickemu version  #  TODO  
+
+##  Works with any version of original 'quickemu'  
+
+#   To edit quickemu version, use
+
+#   https://github.com/quickemu-project/quickemu/releases/tag/4.4    etc
+
+#   Paste the quickemu file from the zip into /usr/bin
+
+#   OR place elsewhere with given path   #  TODO  quickemu commands need to become a variable
+
 
 
 ## SET THE DEFAULT VM FOLDER, where the Virtual Machines are normally found. 
@@ -39,13 +51,11 @@
 
 # shellcheck disable=SC2034,SC2154   
 
-# eg. Default_VM_Folder="/media/xxx/Files/VMQs"
-
-Default_VM_Folder=
+Default_VM_Folder="/media/xxx/Files/VMQs"
 
 # A second & third may also be set:
 
-Second_VM_Folder=
+Second_VM_Folder="/media/xxx/Files/VMQs/Insider"
 
 Third_VM_Folder=
 
@@ -61,13 +71,12 @@ X_Shade="3"
 
 #  TEXT EDITOR  
 
-#  Leave blank to use system defaults for editing the settings file, otherwise give "name" of a specific editor  
+#  Leave blank to use system defaults for editing the settings file, otherwise give "name" of a specific editor eg. gedit, pluma ... 
 
 TextEditor=
 
 
-
-if [[ $1 == "QMOD" ]]; then
+if [[ $1 == "QMOD" ]] || [[ $1 == "QWRAP" ]] ; then
 
   # SET THE ASSOCIATIVE ARRAY with  ,0] as the discrete VM folder  &  ,1] as the .conf   
 
@@ -81,42 +90,65 @@ if [[ $1 == "QMOD" ]]; then
 
   # VM_Array[2,0]="$Default_VM_Folder" ; VM_Array[2,1]="macos-catalina.conf"
 
-  # NB should be contiguous, non-sparse
+  # Should be contigiuous, non-sparse
   
 
-  VM_Array[0,0]= ; VM_Array[0,1]=
+  VM_Array[0,0]="/media/xxx/Files/VMQs" ; VM_Array[0,1]="windows-11.conf"
 
-  VM_Array[1,0]= ; VM_Array[1,1]=
+  VM_Array[1,0]="/media/xxx/Files/VMQs/Insider" ; VM_Array[1,1]="windows-11.conf"
 
-  VM_Array[2,0]= ; VM_Array[2,1]=
-
-  VM_Array[3,0]= ; VM_Array[3,1]=
-
-  VM_Array[4,0]= ; VM_Array[4,1]=
+  VM_Array[2,0]="/media/xxx/Files/VMQs" ; VM_Array[2,1]="macos-catalina.conf"
 
 
 
-  # OPTIONS
-
-  VerboseArgs=                #  Set =1  to normally display the qemu args, with okay dialogue, in human readable & before booting.  
-
-  #                           #  Set blank for log file only. In menu toggle also available. (A log file is always outputted to the VM's main folder) 
+  # OPTIONS    (qmod only, not original quickemu)    
 
 
-  EXTRA_ARGS=                 #  May be added here, if normally required. Also add here to attempt overide standard quickemu settings.
+  VerboseArgs=                
+  
+  #  Set =1  to normally display the qemu args, with okay dialogue, in human readable & before booting.  
 
-  #                           #  A simpler and improved method is possible in the mod script than with the original one. 
-
-  #                           #  See  https://qemu.readthedocs.io/en/latest/system/invocation.html
-
-  #                           #  Format = "group quoted" with single-space separated elements eg: 
-
-  #                           #  EXTRA_ARGS="-device tpm-tis,tpmdev=tpm0"     
+  #  Set blank for log file only. In menu toggle also available. (A log file is always outputted to the VM's main folder) 
 
 
+  ExtraArgs=
 
+  #  Extra QEMU Args may be added here, if normally required. Also add ad hoc via the main menu.
+
+  #  A simpler and improved method is possible in the mod script than with the original one. 
+
+  #  Format = "group quoted" with single-space separated elements eg:  ExtraArgs="-device tpm-tis,tpmdev=tpm0" 
+
+  #  See  https://qemu.readthedocs.io/en/latest/system/invocation.html
+
+  
+
+  Extra_QE_Params=
+
+  #  Extra quickemu parameters to be used at VM run time.  
+
+  #  Format = "group quoted" with single-space separated elements eg:  Extra_QE_Params="--full-screen  --status-quo" 
+
+  #  See quickemu --help for full list   NB  not all options can be applicable  CAUTION 
+
+  #  Of note:  "--full-screen" only works with spice display ...   
+
+
+  KVM_MSR_ModProbeFile="/etc/modprobe.d/kvm-quickemu.conf"
+
+  # File for default KVM behaviour for unhandled machine-specific registers. ( REVIEW )
+  
+  # Edit here if your OS locates 'modprobe.d' differently.  QMOD default is "/etc/modprobe.d/kvm-quickemu.conf"
+
+
+fi
+
+
+if [[ $1 == "QMOD" ]] ; then
 
   # See section 'WINDOWS & HYPERVISOR' in this script for more details.
+
+  # NB Version 1 only   #  TODO  && wrap
 
   WinHyperV_RC=               #  Windows Hypervisor Recipe.  Leave blank for defaults.  Otherwise, set "4.2" or "Custom" 
 
@@ -171,15 +203,7 @@ if [[ $1 == "QMOD" ]]; then
 
   Default_SCSI=    #  If not specified, will use 'virtio-blk' as per ver 4.3 & 4.5 etc   Set =1 to use SCSI as 4.4.
 
-
 fi
-
-
-## File for default KVM behaviour for unhandled machine-specific registers. 
-
-#  Edit here if your OS locates 'modprobe.d' differently.  QMOD default is "/etc/modprobe.d/kvm-quickemu.conf"
-
-KVM_MSR_ModProbeFile="/etc/modprobe.d/kvm-quickemu.conf"
 
 
 ## End of Settings

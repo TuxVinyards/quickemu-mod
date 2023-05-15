@@ -4,6 +4,5 @@
 
 #  May be placed in PATH, perhaps, with main script in userland ...
 
-. quickemu-mod 
-
+. quickemu-wrap  
 #  

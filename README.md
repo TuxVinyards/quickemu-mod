@@ -18,7 +18,6 @@
 
 qMod remains in place, mainly for use with difficult legacy quickemu 4.2 to 4.4 Windows loading problems.
 
-
 ### qTools: Automates the one by one commands
 
 - Manages multiple snapshots

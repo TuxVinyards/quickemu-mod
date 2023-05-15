@@ -31,7 +31,7 @@
   # Adding a dot is recommended for any placement in the main $HOME folder
 
 
-## SET quickemu version  #  TODO  
+## SET quickemu version  
 
 ##  Works with any version of original 'quickemu'  
 
@@ -41,7 +41,7 @@
 
 #   Paste the quickemu file from the zip into /usr/bin
 
-#   OR place elsewhere with given path   #  TODO  quickemu commands need to become a variable
+#   OR place elsewhere with given path   
 
 
 
@@ -49,13 +49,15 @@
 
 # May be left blank if the main quickemu-mod script is already located there. 
 
+# eg. Default_VM_Folder="/media/xxx/Files/VMQs"
+
 # shellcheck disable=SC2034,SC2154   
 
-Default_VM_Folder="/media/xxx/Files/VMQs"
+Default_VM_Folder=
 
 # A second & third may also be set:
 
-Second_VM_Folder="/media/xxx/Files/VMQs/Insider"
+Second_VM_Folder=
 
 Third_VM_Folder=
 
@@ -93,11 +95,11 @@ if [[ $1 == "QMOD" ]] || [[ $1 == "QWRAP" ]] ; then
   # Should be contigiuous, non-sparse
   
 
-  VM_Array[0,0]="/media/xxx/Files/VMQs" ; VM_Array[0,1]="windows-11.conf"
+  #VM_Array[0,0]="/media/xxx/Files/VMQs" ; VM_Array[0,1]="windows-11.conf"
 
-  VM_Array[1,0]="/media/xxx/Files/VMQs/Insider" ; VM_Array[1,1]="windows-11.conf"
+  #VM_Array[1,0]="/media/xxx/Files/VMQs/Insider" ; VM_Array[1,1]="windows-11.conf"
 
-  VM_Array[2,0]="/media/xxx/Files/VMQs" ; VM_Array[2,1]="macos-catalina.conf"
+  #VM_Array[2,0]="/media/xxx/Files/VMQs" ; VM_Array[2,1]="macos-catalina.conf"
 
 
 

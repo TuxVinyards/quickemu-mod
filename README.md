@@ -46,6 +46,8 @@ The simplest method is just to place files quickemu-mod & qmod_settings next to 
 Alternatively, add the files to the system so they can be called straight from the terminal:
 
 ```bash
+sudo cp quickemu-wrap /usr/bin/qwrap
+
 sudo cp quickemu-mod /usr/bin/qmod
 
 cp qmod_settings $HOME/.qmod_settings

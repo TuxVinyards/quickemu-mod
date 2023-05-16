@@ -37,11 +37,11 @@ Select VM from a multi-folder list:
 
 The initial set up should be with the original quickemu as normal.  <https://github.com/quickemu-project/quickemu>
 
-Click on the 'Code' button, then 'Download ZIP'
+Click on here on the 'Code' button, then 'Download ZIP' for the quickemu-mod files.
 
 ![Screenshot at 2023-02-21 10-49-29-560](https://user-images.githubusercontent.com/3956806/220318265-e05b5f26-54b6-49e7-bc60-79df14b08a89.png)
 
-The simplest method is just to place files quickemu-mod & qmod_settings next to your VM .conf files.  Click and go.
+The simplest method is just to extract & place files quickemu-mod / wrap & qmod_settings next to your VM .conf files.  Click and go.
 
 Alternatively, add the files to the system so they can be called straight from the terminal:
 
@@ -57,6 +57,7 @@ cp qmod_settings $HOME/.qmod_settings
 sudo cp quickemu-tools /usr/bin/qtools
 
 ```
+You can also edit the .conf files to create individual mouse click starts for qwrap via your file manager from your VM folder.
 
 Read the qmod main file & settings file for further details on location and other features.
 

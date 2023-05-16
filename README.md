@@ -60,6 +60,8 @@ sudo cp quickemu-tools /usr/bin/qtools
 
 Read the qmod main file & settings file for further details on location and other features.
 
+Note the .dot when adding to ~ / $HOME which will tidy the file away as hidden. Edit via the script menu. (or ctrl-h etc to unhide).
+
 ## Issues
 
 For Windows Updates & Boot problems, for see my comments and notes to those issues, on Martin's pages:

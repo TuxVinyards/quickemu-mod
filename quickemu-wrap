@@ -83,9 +83,14 @@ if [[ "$1" == ?'-vm' ]]; then
 
   Specified_SettingsFolder="$(dirname "$0")"
   
+  CurrentFolder="$(dirname "$2")"
+
+else 
+
+  CurrentFolder="$(pwd)"
+  
 fi
 
-CurrentFolder="$(pwd)"
 
 if [[ -e "$Specified_SettingsFolder/qmod_settings" ]] && [[ "$CurrentFolder" != '/usr'* ]]; then  
 
@@ -338,7 +343,7 @@ print_kvm_status () {
 
       fi
 
-      printf "\n"
+      # printf "\n"
 
     fi
     
@@ -352,7 +357,7 @@ print_kvm_status () {
 
     fi
 
-    printf "\n"
+    # printf "\n"
 
   fi
 
@@ -516,7 +521,7 @@ select_msr_config () {
 
       print_kvm_status
 
-      printColor "\n\n  [enter]  to return \n\n"
+      printColor "\n\n\n  [enter]  to return \n\n"
       read -rp  "  > "
 
       break
@@ -531,7 +536,7 @@ select_msr_config () {
       
         Set_MSR_defaults= 
         print_kvm_status
-        printColor "\n\n  Make TEMPORARY setting adjustments to MSRS ?"
+        printColor "\n\n\n  Make TEMPORARY setting adjustments to MSRS ?"
 
       else 
         function_find_kvm_msr_default_and_status
@@ -560,6 +565,8 @@ msrs_conflict_check_resolver() {
     # usual system default = N
 
     if [[ "$VM_InstanceName" == *windows*  ]] ||	[[ "$VM_InstanceName" == *macos*  ]] ; then 
+
+      [[ ! $ByPass_VM_Array_Selector ]] && printf "\033c"
     
       printColor "\n\n  Selected: %s "  "$VM_InstanceName"
       
@@ -582,6 +589,8 @@ msrs_conflict_check_resolver() {
     #  Status = Y  &  which is only recommended for Windows & Mac 
 
     if [[ "$VM_InstanceName" != *windows*  ]] &&	[[ "$VM_InstanceName" != *macos*  ]] ; then
+
+      [[ ! $ByPass_VM_Array_Selector ]] && printf "\033c"
 
       printColor "\n\n  Selected: %s "  "$VM_InstanceName"
     
@@ -918,11 +927,18 @@ function_conf_error () {
 
 }
 
+
 function_VM_array_add_confs () {
 
   ## Adds to VM array & lists, if submitted item has not been already listed 
 
   # where $1 is 'VM_Path' and  $2 is 'VM_Conf' to be tested against the existing list (non-sparse)
+
+  #  If initial settings file has populated / part-populated the array then ${VM_Array[0,0]} will be present
+
+  if [[ ! ${VM_Array[0,0]} ]]; then New_VM_Number=0  
+
+  else New_VM_Number="$((${#VM_Array[@]} / 2))" ; fi
 
   local i=0
 
@@ -931,32 +947,40 @@ function_VM_array_add_confs () {
     ArrFolderFile="${VM_Array[$i,0]}/${VM_Array[$i,1]}"
     TestFolderFile="$1/$2"
 
-    [[ ! -e $TestFolderFile ]] && function_conf_error  "function_VM_array_add_confs"
+    [[ ! -e $TestFolderFile ]] && function_conf_error  "VM_array_add_confs: File Not Found"
 
-    [[ $ArrFolderFile == "$TestFolderFile" ]] && return
-    ((i+=1))
+    if [[ $ArrFolderFile == "$TestFolderFile" ]]; then 
+    
+      # already exists, stop searching, quit function:
+      return
 
+    else  
+
+      # carry on interating the array
+      ((i+=1))  
+
+    fi
+    
   done
 
   if grep -q 'guest_os=' "$TestFolderFile" 2> /dev/null ; then
 
-    VM_Array[$VM_Number,0]="$1" 
-    VM_Array[$VM_Number,1]="$2" 
+    # if at the end there is no match found then add it, if it is valid
 
-    [[ ! $ByPass_VM_Array_Selector ]] && printf "\n\n %2d  %s " "$VM_Number" "${VM_Array[$VM_Number,0]}/${VM_Array[$VM_Number,1]}"
+    VM_Array[$New_VM_Number,0]="$1" 
+    VM_Array[$New_VM_Number,1]="$2" 
 
-    ((VM_Number+=1))
-
-  fi
-
+ fi
+  
 }
 
 
 function_Scan_VM_folders () {
 
-  ##  Add scans of current & listed VM folders for other potential '.conf' files to the VM array
+  ##  Scans of current & listed VM folders for other potential '.conf' files to the VM array
 
-  [[ ! ${VM_Array[0,0]} ]] && VM_Number=0    
+  #   Adds via calls to 'function_VM_array_add_confs'
+
 
   CurrentFolder_Conf_String="$(ls "$CurrentFolder/"*.conf 2> /dev/null)"
 
@@ -1019,29 +1043,29 @@ function_list_conf_array () {
 
   # Print a list of the VM's in the VM array
 
-  VM_Number=0
+  VM_List_Num=0
 
-  while [[ ${VM_Array[$VM_Number,0]} ]] ; do
+  while [[ ${VM_Array[$VM_List_Num,0]} ]] ; do
 
-    if [[ ! -d "${VM_Array[$VM_Number,0]}" ]]; then 
+    if [[ ! -d "${VM_Array[$VM_List_Num,0]}" ]]; then 
 
-      printf "\n\n  ERROR  quickemu-mod folder not found: \n\n  %s \n\n" "${VM_Array[$VM_Number,0]}"
+      printf "\n\n  ERROR  quickemu-mod folder not found: \n\n  %s \n\n" "${VM_Array[$VM_List_Num,0]}"
 
-      function_conf_error  "folder $VM_Number" 
+      function_conf_error  "folder $VM_List_Num" 
       SelectArrayError=1
       break 
 
     else
 
-        if [[ -e "${VM_Array[$VM_Number,0]}/${VM_Array[$VM_Number,1]}" ]]; then 
+        if [[ -e "${VM_Array[$VM_List_Num,0]}/${VM_Array[$VM_List_Num,1]}" ]]; then 
 
-        [[ ! $ByPass_VM_Array_Selector ]] && printf "\n\n %2d  %s " "$VM_Number" "${VM_Array[$VM_Number,0]}/${VM_Array[$VM_Number,1]}"
+        [[ ! $ByPass_VM_Array_Selector ]] && printf "\n\n %2d  %s " "$VM_List_Num" "${VM_Array[$VM_List_Num,0]}/${VM_Array[$VM_List_Num,1]}"
 
       else
 
-        printf "\n\n  ERROR  quickemu-mod ' .conf ' not found: \n\n  %s \n\n" "${VM_Array[$VM_Number,0]}/${VM_Array[$VM_Number,1]}"
+        printf "\n\n  ERROR  quickemu-mod ' .conf ' not found: \n\n  %s \n\n" "${VM_Array[$VM_List_Num,0]}/${VM_Array[$VM_List_Num,1]}"
 
-        function_conf_error  "config $VM_Number" 
+        function_conf_error  "config $VM_List_Num" 
         SelectArrayError=1
         break
 
@@ -1049,7 +1073,7 @@ function_list_conf_array () {
 
     fi
 
-    ((VM_Number+=1))
+    ((VM_List_Num+=1))
 
   done
   
@@ -1067,13 +1091,15 @@ function_Select_VM () {
 
     # printf "\n\n  ByPassing VM Loader ... "  
 
-    true 
+    ByPass_VM_Array_Loader=
 
   else 
 
     # Re-scan folders as something new may have been added
 
     function_Scan_VM_folders
+
+    function_VM_array_add_confs
 
   fi
 
@@ -1090,8 +1116,10 @@ function_Select_VM () {
     VM_Conf_Dir=
     VM_Conf_File=
 
-    function_list_conf_array
+    printf "\n"
 
+    function_list_conf_array
+    
     printf "\n\n\n\n  [number] to select a VM    [q] to quit "
 
     printColor "\n\n  [Enter]  to select %s (VM 0)"  "${VM_Array[0,1]}"
@@ -1134,11 +1162,9 @@ function_Select_VM () {
     [[ ! -e "$VM_Conf_File" ]] &&  function_conf_error  ".conf file" && SelectArrayError=1
 
 
-    # As Quickemu which sets the same name to the .conf file and to the main folder 
+    # Set Instance Name, following Quickemu pattern which sets the same name to the .conf file and to the main folder 
 
     VM_InstanceName="${VM_Conf_File/.conf}"
-
-    # VM_QCOW_Dir="$VM_Conf_Dir/$VM_InstanceName"
 
 
     # Check that the dir contains the right files  &&  grep .conf for right content
@@ -1153,7 +1179,7 @@ function_Select_VM () {
 
     fi
 
-    ! grep -q 'guest_os=' "$VM_Conf_File" && function_conf_error  ".conf file"   && SelectArrayError=1
+    ! grep -q 'guest_os=' "$VM_Conf_File" 2> /dev/null && function_conf_error  ".conf file"   && SelectArrayError=1
   
 
     # Check KVM parameter settings & advise according to guest OS
@@ -1444,6 +1470,8 @@ function_show_main_menu_header () {
 
     fi
 
+    printf "\n"
+
     [[ $KVM_MSR_Error ]] && print_kvm_status
 
   fi
@@ -1503,14 +1531,11 @@ if [[ $1 ]]; then
   fi
 
 
-  # Selection now made, but array must be loaded needed for reselecting still ...
-
-  function_Scan_VM_folders
+  # Selection now made, but array must still be loaded as may be needed for reselecting later ...
 
   ByPass_VM_Array_Selector=1
 
 fi
-
 
 
 ##  Start Q-wrap menu :   
@@ -1602,6 +1627,8 @@ while true ; do
     if [[ $ShowUtilsMenu ]]; then
 
       print_kvm_status
+
+      printf "\n"
 
       if [[ $VerboseArgs ]]; then printf  "\n\n  [v]   hide verbose qemu args"	
 
@@ -1724,7 +1751,7 @@ while true ; do
     mapfile -t SnapListArrRaw <<< "$SnapListString"
 
     i=0
-    printColor "\n\n ID  Array  Name \n\n"
+    printColor "\n\nID   Array  Name \n\n"
     while [[ "${SnapListArrRaw[$i]}" ]]; do
       IFS=' ' read -ra SnapListArrSeparated <<< "${SnapListArrRaw[$i]}"
       printf "%2d    %2d    %s \n"  "${SnapListArrSeparated[0]}"  "$i"  "${SnapListArrSeparated[1]}"
@@ -1733,8 +1760,8 @@ while true ; do
 
     SnapListArrTotal=$((i-1))
 
-    printColor "\n\n Give ARRAY number 0 to %s of snapshot or start of snapshot range to delete"  "$SnapListArrTotal"
-    printf "\n\n [enter] to return to main menu "
+    printColor "\n\nGive ARRAY number 0 to %s of snapshot, or start of snapshot range to delete"  "$SnapListArrTotal"
+    printf "\n\n A confirmation prompt will be given before starting ...   [enter] to return to main menu "
 
     SnapName=
     SnapDeleteStart=

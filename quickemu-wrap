@@ -124,7 +124,7 @@ fi
 if [[ $Q_Mod_SettingsFile ]] ; then echo; echo "  Using settings file $Q_Mod_SettingsFile" ; echo ; fi
 
 
-# Declare global associative VM ARRAY 
+# Declare global associative VM ARRAY & other initializing global vars
 
 declare -gA VM_Array=()
 
@@ -665,11 +665,9 @@ function_clear_quickemu_vars () {
 }
 
 
-# Overwrite Original Functions Source, as required
+## Overwrite Original Functions Source, as required
 
 declare -f vm_boot  >  "/tmp/qmod-function-vm_boot-orig-temp"
-
-#  TODO  patch in $WinHyperV_RC  & create RC reader function ??
 
 # shellcheck disable=SC2016
 
@@ -683,15 +681,17 @@ QE_vm_bootCutOff=$((QE_vm_bootLength-QE_qemuCallPoint+1))
 
 declare -f vm_boot  | head -n -"$QE_vm_bootCutOff"  >  "/tmp/qmod-function-vm_boot-temp"
 
+
+## ADD-IN extra code  ( place between the first EOF line & the brace that closes the tail trimmed boot function, just before the second EOF)
+
 # See https://stackoverflow.com/questions/22697688/how-to-cat-eof-a-file-containing-code     ( use escape EOF, not quotes )
 
 cat << \EOF >> "/tmp/qmod-function-vm_boot-temp"
 
+  #  REVIEW can patching in $WinHyperV_RC  & creating a RC reader function be done here ??
+
   # Show all the compiled qemu & swmtp arguments as a human readable list 
-
-  # both to a log file and to screen
-
-  QemuArgsFile="${VMDIR}/QemuArgsList.txt"
+  # both to a log file and to screen   (Args & Args/HW record are defined after the VM selection or re-selection)
 
   printf   "\n  Present Working Directory:  %s"  "$(pwd)" > "$QemuArgsFile"
   printf "\n\n  Qemu:  %s" "$QEMU" >> "$QemuArgsFile"
@@ -714,12 +714,15 @@ cat << \EOF >> "/tmp/qmod-function-vm_boot-temp"
     printf "\n\n\n"  >> "$QemuArgsFile"
 
   if [[ $VerboseArgs ]]; then 
+
+    # hold the launch till we have checked the config 
     BreakAtVerboseArgs=
     cat "$QemuArgsFile"
     printColor "  [enter] to continue  [b] to go back \n\n"
     read -rp " >  " BreakAtVerboseArgs
     printf "\n\n"
     [[ $BreakAtVerboseArgs == "b" ]]  && return
+
   fi
 
   # call QEMU  (with any extras, if present)
@@ -728,15 +731,26 @@ cat << \EOF >> "/tmp/qmod-function-vm_boot-temp"
  
   eval "$QEMU" "${args[*]}" " $ExtraArgs"  -D  "${VMDIR}/${VMNAME}.qemu.error.log" &
 
-  # wait $!  # Move control to PID menu instead
+  # wait $! not needed. Control now moved to PID menu instead
 
   fi
+  
 }
 
 EOF
 
-source "/tmp/qmod-function-vm_boot-temp"
 
+##  Make sure we have a record of the virtual hardware that Qemu creates. Especially useful for Windows builds.
+
+#   See  https://github.com/quickemu-project/quickemu/issues/572#issuecomment-1531348755
+
+[[ ! -e "$QemuVirtHardwareRecord" ]]  &&  cp "$QemuArgsFile"  "$QemuVirtHardwareRecord"
+
+
+
+## Now run the modded boot code
+
+source "/tmp/qmod-function-vm_boot-temp"
 
 
 ## Add in the standard parameter cases 
@@ -1616,6 +1630,14 @@ while true ; do
   fi
 
 
+  ##  Set or adjust any VM_Conf_Dir related globals  (VM is now selected OR has been re-selected)
+
+  QemuArgsFile="$VM_Conf_Dir/$VM_InstanceName/QemuArgsList.txt"
+
+  QemuVirtHardwareRecord="$VM_Conf_Dir/$VM_InstanceName/QemuVirtHardwareRecord.txt"
+
+
+  ## Print menu:
 
   if [[ ! $MainMenuChoice ]]; then
 
@@ -1632,13 +1654,13 @@ while true ; do
 
       if [[ $VerboseArgs ]]; then printf  "\n\n  [v]   hide verbose qemu args"	
 
-      else  printf  "\n\n  [v]   show verbose qemu args before booting"	
+      else  printf  "\n\n  [v]   show verbose qemu args & check before booting"	
       
       fi
 
       printf  "\n\n  [xa]  add extra qemu args  [m] toggle msrs "
 
-      printf  "\n\n  [u]   hide utils & technical"
+      printf  "\n\n  [u]   hide utils & technical   [hdw]  Add current config to QemuVirtHardwareRecord list"
     
       [[ $ExtraArgs ]] && printf  "   Current Extra: \n\n  %s"  "$ExtraArgs"
 
@@ -1669,6 +1691,7 @@ while true ; do
 
     printf  "\n\n\n"
 
+
     read -rp "  >  "  MainMenuChoice
 
   fi
@@ -1679,6 +1702,42 @@ while true ; do
   if [[ $MainMenuChoice == "h" ]] ; then
 
     show_quickemu_mod_help
+
+  elif [[ $MainMenuChoice == "hdw" ]] ; then
+
+    AddHW_Record=
+
+    if [[ -e "$QemuArgsFile" ]]; then 
+
+      printf "\033c"
+
+      if [[ -e "$QemuVirtHardwareRecord" ]]; then printf "\n\n  Existing Record: \n\n"; cat "$QemuVirtHardwareRecord"; fi
+
+      printf "\n\n  Current Args / Qemu Virtual Hardware \n\n"
+    
+      cat "$QemuArgsFile"
+      
+      if [[ -e "$QemuVirtHardwareRecord" ]]; then printColor "  Copy Current Args onto the end of existing record list?\n\n"
+
+      else printColor "  Create new Virtual Hardware Record using Current Args?\n\n"
+
+      fi
+
+      read -rp "  [enter] to continue  [b] to go back"  AddHW_Record
+
+      if [[ $AddHW_Record != "b" ]]; then 
+             
+        cat "$QemuArgsFile" >> "$QemuVirtHardwareRecord"
+
+      fi
+
+    else
+
+      printf "\n\n  No Args log found. The virtual machine launch process must be run first. \n\n"
+
+      printf "\n\n  The 'VerboseArgs' option may be used, which will allow checking.  \n\n"
+
+    fi 
 
   elif [[ $MainMenuChoice == "u" ]] ; then
 

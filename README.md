@@ -55,13 +55,15 @@ cp qmod_settings $HOME/.qmod_settings
 # For just the tools set:
 
 sudo cp quickemu-tools /usr/bin/qtools
-
 ```
+
 You can also edit the .conf files to create individual mouse click starts for qwrap via your file manager from your VM folder.
 
 Read the qmod main file & settings file for further details on location and other features.
 
 Note the .dot when adding to ~ / $HOME which will tidy the file away as hidden. Edit via the script menu. (or ctrl-h etc to unhide).
+
+Finally, whatever software you are using, standard good practice: always make backups of any critical VM's
 
 ## Issues
 
@@ -89,6 +91,9 @@ No densely packed lines of unexplained regex style hieroglyphics, please.
 ## Changes
 
 \@ 2023-05-15 I have found a way to get a full wrapping script that still gives a menu interface and allows modding. This now replaces quickemu-tools as default to accompany quickemu original. Depending on your point of view, use it in a similar way to quickgui. But with more features.
+
+\@ 2023-05-19  Added the ability to store a record of the Qemu Virtual Hardware profile.  Esp. useful for Windows VM's.
+Qwrap only (at present?)  See <https://github.com/quickemu-project/quickemu/issues/572#issuecomment-1531348755>
 
 I am leaving qMod in place, mainly for use with difficult legacy quickemu 4.2 to 4.4 Windows loading problems.
 

@@ -42,8 +42,6 @@
 
 #  As a separate script it has its own licence and is less onerous to maintain.
 
-#  TODO  add quickget wrapped interface
-
 #  See accompanying LICENCE text file.
 
 #  If adding code, please refer to  http://mywiki.wooledge.org/BashGuide/Practices#Readability  
@@ -56,7 +54,7 @@
 #  shellcheck disable=SC2242
 
 
-ModVersion="2023.04"
+ModVersion="2023.05.19"
 
 ModName="$(basename "$0")"
 
@@ -193,12 +191,6 @@ QEMU_IMG=$(command -v qemu-img)
 
 if [[ ! $QEMU ]] || [[ ! $QEMU_IMG ]]; then
   printf "\n\n QEMU not found. Check installations of qemu-system-x86_64 and qemu-img"
-  exit 1
-fi
-
-
-if [[ ! $(type -p quickemu) ]] ; then
-  printf "\n\n  QUICKEMU not found. See https://github.com/quickemu-project/quickemu "
   exit 1
 fi
 
@@ -624,28 +616,47 @@ msrs_conflict_check_resolver() {
 #   The original code remains basically as is but some calls get re-routed via new functions ....
 
 
-QE_StartFuncsPoint=$(grep -n -m 1 'function' "/usr/bin/quickemu" | cut -d ':' -f 1)
+## Load the right version of quickemu  (from settings)
+
+# shellcheck disable=SC2154
+
+if [[ $QE_Version ]]; then QuickEmuSource="$QE_ScriptFolder/$QE_Version" ; else QuickEmuSource="/usr/bin/quickemu" ; fi
+
+# shellcheck disable=SC2154
+
+if [[ ! $(type -p "$QuickEmuSource") ]] ; then
+
+  printf "\n\n  QUICKEMU not found. See https://github.com/quickemu-project/quickemu "
+
+  printColor  "\n\n  ERROR  Settings or Installation FilePath:\n\n  %s \n\n"  "$QuickEmuSource"
+
+  exit  hold
+
+fi
+
+
+QE_StartFuncsPoint=$(grep -n -m 1 'function' "$QuickEmuSource" | cut -d ':' -f 1)
 
 # grep -n : print line number with the output lines   -m : stop after NUM selected lines
 
 ((QE_StartFuncsPoint -= 1))
 
-QE_EOfuncsPoint=$(grep -n '### MAIN' "/usr/bin/quickemu" | cut -d ':' -f 1)
+QE_EOfuncsPoint=$(grep -n '### MAIN' "$QuickEmuSource" | cut -d ':' -f 1)
 
 QE_EOfuncsTrim=$((QE_EOfuncsPoint - QE_StartFuncsPoint -1))
 
-tail +"$QE_StartFuncsPoint" "/usr/bin/quickemu" | head -"$QE_EOfuncsTrim"  > "/tmp/qmod-functions-temp"
+tail +"$QE_StartFuncsPoint" "$QuickEmuSource" | head -"$QE_EOfuncsTrim"  > "/tmp/qmod-functions-temp"
 
 source "/tmp/qmod-functions-temp" 
 
 
 # Quickemu Variables (set & clear)
 
-QE_VarsEndPoint=$(grep -n '# Take command line arguments' "/usr/bin/quickemu" | cut -d ':' -f 1)
+QE_VarsEndPoint=$(grep -n '# Take command line arguments' "$QuickEmuSource" | cut -d ':' -f 1)
 
 QE_varsLines=$((QE_VarsEndPoint - QE_EOfuncsPoint))
 
-tail +"$QE_EOfuncsPoint" "/usr/bin/quickemu" | head -"$QE_varsLines"  > "/tmp/qmod-qe-all-vars-temp"
+tail +"$QE_EOfuncsPoint" "$QuickEmuSource" | head -"$QE_varsLines"  > "/tmp/qmod-qe-all-vars-temp"
 
 source "/tmp/qmod-qe-all-vars-temp"
 
@@ -665,6 +676,9 @@ function_clear_quickemu_vars () {
   source "/tmp/qmod-qe-rw-vars-temp"
 
 }
+
+function_clear_quickemu_vars
+
 
 
 ## Overwrite Original Functions Source, as required
@@ -696,8 +710,10 @@ cat << \EOF >> "/tmp/qmod-function-vm_boot-temp"
   # both to a log file and to screen   (Args & Args/HW record are defined after the VM selection or re-selection)
 
   printf   "\n  Present Working Directory:  %s"  "$(pwd)" > "$QemuArgsFile"
-  printf "\n\n  Qemu:  %s" "$QEMU" >> "$QemuArgsFile"
-  printf "\n\n  Date:  %s \n" "$(date)" >> "$QemuArgsFile"
+  printf "\n\n  Qemu:      %s  %s" "$QEMU" "$QEMU_VER_LONG" >> "$QemuArgsFile"
+  printf "\n\n  QuickEmu:  %s" "$VERSION"  >> "$QemuArgsFile"
+  printf "\n\n  Q wrap:    %s" "$ModVersion" >> "$QemuArgsFile"
+  printf "\n\n  Date:      %s \n" "$(date)" >> "$QemuArgsFile"
 
   for a in "${args[@]}"; do
     if [[ "$a" == -dev* ]]; then printf "\n\n  %s" "$a" >> "$QemuArgsFile"
@@ -757,7 +773,7 @@ source "/tmp/qmod-function-vm_boot-temp"
 
 ## Add in the standard parameter cases 
 
-tail +"$QE_EOfuncsPoint" "/usr/bin/quickemu" > "/tmp/qmod-endof-file-temp"
+tail +"$QE_EOfuncsPoint" "$QuickEmuSource" > "/tmp/qmod-endof-file-temp"
 
 # note ' case' with space or grep picks up "Lowercase" on line 3
 
@@ -912,9 +928,9 @@ function_conf_error () {
 
     [[ "$VM_InstanceName" =~ 'windows' ]] && printf "\n\n  128G disk size edit recommended, plus make sure tpm and secure boot are on"
 
-    printf "\\n\n  [Enter] to edit qmod general settings   [q] to quit \n\n"
+    printf "\\n\n  [Enter] to edit %s general settings   [q] to quit \n\n"   "$ModName"
     
-  else   printColor "\n\n  [Enter] to edit qmod settings   [q] to quit \n\n" ; fi
+  else   printColor "\n\n  [Enter] to edit %s settings   [q] to quit \n\n"  "$ModName" ; fi   
 
   read -rp "  >  "   ErrorMenuSelect
 
@@ -1449,11 +1465,11 @@ show_qmod_title() {
 
   printColor "\n\n  Quickemu Mod - Virtual Machine Launcher  Wrap Version %s"  "$ModVersion"
 
-  printf "\n\n  Currently wrapping quickemu %s"  "$VERSION"
+    printf "\n\n  Currently wrapping quickemu %s"  "$VERSION"
 
-  [[ $VerboseArgs ]] && printf  "  (Verbose Args)"
-  
-  printf "\n\n"    
+    [[ $VerboseArgs ]] && printf  "  (Verbose Args)"
+    
+    printf "\n\n"   
 
 }
 
@@ -1566,11 +1582,12 @@ MultiInstanceCount="$(pgrep -c "$ModName")"
 
 if [[ $MultiInstanceCount -gt 1 ]]; then 
 
-  printColor "\n\n  ERROR more than one instance of q-mod is running \n\n"
+  printColor "\n\n  ERROR more than one instance of %s is running \n\n"  "$ModName"
 
   read -rp "  Close the other instances, then press [enter] to continue  > "
 
 fi
+
 
 # MAIN MENU  (select VM then choose actions to do)
 

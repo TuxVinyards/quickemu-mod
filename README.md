@@ -95,6 +95,8 @@ No densely packed lines of unexplained regex style hieroglyphics, please.
 \@ 2023-05-19  Added the ability to store a record of the Qemu Virtual Hardware profile.  Esp. useful for Windows VM's.
 Qwrap only (at present?)  See <https://github.com/quickemu-project/quickemu/issues/572#issuecomment-1531348755>
 
+Also add quickemu version selection to the settings.
+
 I am leaving qMod in place, mainly for use with difficult legacy quickemu 4.2 to 4.4 Windows loading problems.
 
 Global shellcheck supression to help with all the 'args' warnings that come from the original quickemu code has now been moved to the file header.

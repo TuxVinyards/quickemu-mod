@@ -4,7 +4,7 @@
 
 ### Command line power with graphical ease
 
-- Replaces quickgui
+- Replaces quickgui (runtime monitoring)
 - Simple mouse click start
 - Improves Windows boot up
 - Full & extra diagnostics

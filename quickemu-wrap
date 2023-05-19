@@ -42,6 +42,8 @@
 
 #  As a separate script it has its own licence and is less onerous to maintain.
 
+#  TODO  add quickget wrapped interface
+
 #  See accompanying LICENCE text file.
 
 #  If adding code, please refer to  http://mywiki.wooledge.org/BashGuide/Practices#Readability  

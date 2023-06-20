@@ -90,6 +90,8 @@ No densely packed lines of unexplained regex style hieroglyphics, please.
 
 ## Changes
 
+\@ 2023-06-20  From quickemu 4.8, the value " --screenpct xx"  may be used on SDL, where xx is a value from 25 to 100   (Linux VM's only)   This currently should be added to the settings file eg. `Extra_QE_Params="--screenpct 85"`
+
 \@ 2023-05-15 I have found a way to get a full wrapping script that still gives a menu interface and allows modding. This now replaces quickemu-tools as default to accompany quickemu original. Depending on your point of view, use it in a similar way to quickgui. But with more features.
 
 \@ 2023-05-19  Added the ability to store a record of the Qemu Virtual Hardware profile.  Esp. useful for Windows VM's.

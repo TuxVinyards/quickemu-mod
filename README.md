@@ -2,7 +2,7 @@
 
 ## Quickemu / Quickget wrapping script
 
-@2023/07/05  
+\@2023/07/05  
 
 - Now features full wrapping of both Quickemu & Quickget
 - Improved settings file gives selectable versioning & non-limited VM folders
@@ -17,7 +17,9 @@
 
 ![Screenshot at 2023-02-22 12-59-04-1920](https://user-images.githubusercontent.com/3956806/220619057-f63883d2-4d0d-4130-94e1-d444f1567be4.jpg)
 
-\@ 2023-05-15 Now available as a full wrapping script that still gives a menu interface and allows modding. This now replaces quickemu-tools as default to accompany quickemu original. Depending on your point of view, use it in a similar way to quickgui. But with more features. Start by mouse click on the .conf file:
+![QGW](https://github.com/TuxVinyards/quickemu-mod/assets/3956806/c948f51a-a954-4180-ba62-1d5045e5f4fc)
+
+\@ 2023-05-15 Wrapping script now replaces quickemu-tools as default to accompany quickemu original. Use it in a similar way to quickgui but with more features. Start by mouse click on the .conf file or type 'qwrap' at the terminal.
 
 ![Screenshot at 2023-05-15 14-38-25](https://github.com/TuxVinyards/quickemu-mod/assets/3956806/1ef00a03-203e-4099-89f7-f5a703cbe920)
 
@@ -37,6 +39,8 @@ Use along-side original quickemu or as a drop-in replacement.
 Select VM from a multi-folder list:
 
 ![term-tweak](https://user-images.githubusercontent.com/3956806/219943219-ddbe3547-bcd6-4d48-afb0-b549c4810a9c.png)
+
+![73GiB-windows](https://github.com/TuxVinyards/quickemu-mod/assets/3956806/90e4f9fe-92e2-4163-a76d-4c9da775b7ee)
 
 ## Install
 

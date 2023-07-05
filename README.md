@@ -99,7 +99,7 @@ No densely packed lines of unexplained regex style hieroglyphics, please.
 
 ## Changes
 
-@2023/07/05  
+\@2023/07/05  
 
 - Now features full wrapping of both Quickemu & Quickget
 - Improved settings file gives selectable versioning & non-limited VM folders

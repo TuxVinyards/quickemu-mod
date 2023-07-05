@@ -1,68 +1,68 @@
-#! /bin/bash
+#! /bin/bash 
 
 ##  Copyright (c)  Alex Genovese   https://github.com/TuxVinyards
 
 # 	licence:  GPL3   https://www.gnu.org/licenses 
 
 
-## Settings file for 'quickemu-mod' & 'quickget-mod'   2023.02   late alpha / early beta 
+## Settings file for 'quickemu-wrap' & 'quickemu-mod'   2023.07   
 
 
-  # Default location of the settings script is either "$HOME" or a userland VM folder where 'quickemu-mod' has been placed.
+  # Default location of the settings script is either "$HOME" or a userland VM folder where the mod/wrap script has been placed.
+
+  # Both Q-Wrap  &  Q-Mod  will check these locations.  For placement in the main $HOME folder use a hiding-dot eg. ".qmod_settings"
 
 
-  # Using the home folder allows allows multiscript installation:
+  # ADVANCED USERS: may note that placing the settings in the home folder allows multiscript installations to access the same settings file, 
+  
+  # whilst multiple settings files may also be used:  Any file that is local to the mod/wrap script will overide that located at $HOME
 
-  # Q-Mod itself may be then installed next-to or instead-of standard quickemu in /usr/bin
-
-  # &  also as one qmod script per VM folder which will then autoscan its current position for .conf files
-
-
-  # Multiple settings files may also be used.  A file that is local to the qmod script will overide that located at $HOME
-
-
-  # If using non-default locations or changing the filename, then the settings section of the main script must be edited. NB 
+  # If using non-default locations or changing the filename, then the settings section of the calling script must be edited. NB 
 
 
   # Adding a dot to the front of this settings filename will hide/tidy it away (ctrl-h to unhide/hide).
 
-  # After the locations are established, settings may be opened (hidden or not) and edited from within mod scripts via a menu selector.
+  # After the locations are established, settings may be opened (hidden or not) and edited from within the scripts via a menu selector.
 
-  # Adding a dot is recommended for any placement in the main $HOME folder
-
-
-## SET quickemu version  
-
-##  Works with any version of original 'quickemu'  
-
-#   To edit quickemu version, use
-
-#   https://github.com/quickemu-project/quickemu/releases/tag/4.4    etc
-
-#   Paste the quickemu file from the zip into /usr/bin
-
-#   OR place elsewhere with given path   
-
+  # shellcheck disable=SC2034,SC2154   
 
 
 ## SET THE DEFAULT VM FOLDER, where the Virtual Machines are normally found. 
 
 # May be left blank if the main quickemu-mod script is already located there. 
 
-# eg. Default_VM_Folder="/media/xxx/Files/VMQs"
-
-# shellcheck disable=SC2034,SC2154   
-
-Default_VM_Folder=
-
-# A second & third may also be set:
-
-Second_VM_Folder=
-
-Third_VM_Folder=
+Default_VM_Folder=""
 
 
-#  GENERAL COLOR & THEMING  
+# AND any EXTRA FOLDERS or sub folders where VM's may be located,
+
+# using format Extra_VM_Folder+=("/filepath/folder")
+
+Extra_VM_Folder+=("")
+
+Extra_VM_Folder+=("")
+
+Extra_VM_Folder+=("")
+
+Extra_VM_Folder+=("")
+
+
+##  Set SELECTED VM's to show AT THE TOP of the list.  
+
+# Where [n,0] is the discrete VM folder  &  [n,1] is the .conf file   eg:
+
+# VM_Array[0,0]="/media/xxx/Storage/VMQs" ; VM_Array[0,1]="windows-11.conf"
+
+# VM_Array[1,0]="/media/xxx/Storage/VMQs/Insider" ; VM_Array[1,1]="windows-11.conf"
+
+# VM_Array[2,0]="$Default_VM_Folder" ; VM_Array[2,1]="macos-catalina.conf"
+
+# NB associative array & to be set contigiuous, non-sparse
+
+
+
+
+##  GENERAL COLOR & THEMING  
 
 X_Shade="3" 
 
@@ -71,104 +71,85 @@ X_Shade="3"
 #  https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
 
 
-#  TEXT EDITOR  
+##  TEXT EDITOR  
 
 #  Leave blank to use system defaults for editing the settings file, otherwise give "name" of a specific editor eg. gedit, pluma ... 
 
 TextEditor=
 
 
-if [[ $1 == "QMOD" ]] || [[ $1 == "QWRAP" ]] ; then
+## EXTRA OPTIONS  (both qmod & qwrap)  
 
-  # SET THE ASSOCIATIVE ARRAY with  ,0] as the discrete VM folder  &  ,1] as the .conf   
+VerboseArgs=                
 
-  # These VM's will show at the top of the list. Any others will list afterwards. 
+#  Set =1  to normally display the qemu args, with okay dialogue, in human readable & before booting.  
 
-  # eg:
-
-  # VM_Array[0,0]="/media/xxx/Storage/VMQs" ; VM_Array[0,1]="windows-11.conf"
-
-  # VM_Array[1,0]="/media/xxx/Storage/VMQs/Insider" ; VM_Array[1,1]="windows-11.conf"
-
-  # VM_Array[2,0]="$Default_VM_Folder" ; VM_Array[2,1]="macos-catalina.conf"
-
-  # Should be contigiuous, non-sparse
-  
-
-  #VM_Array[0,0]="/media/xxx/Files/VMQs" ; VM_Array[0,1]="windows-11.conf"
-
-  #VM_Array[1,0]="/media/xxx/Files/VMQs/Insider" ; VM_Array[1,1]="windows-11.conf"
-
-  #VM_Array[2,0]="/media/xxx/Files/VMQs" ; VM_Array[2,1]="macos-catalina.conf"
+#  Set blank for log file only. In menu toggle also available. (A log file is always outputted to the VM's main folder) 
 
 
+ExtraArgs=
 
-  # OPTIONS    (qmod only, not original quickemu)    
+#  Extra QEMU Args may be added here, if normally required. Also add ad hoc via the main menu.
+
+#  Modified & simpler method than with the original one. 
+
+#  Format = "group quoted" with single-space separated elements eg:  ExtraArgs="-device tpm-tis,tpmdev=tpm0" 
+
+#  See  https://qemu.readthedocs.io/en/latest/system/invocation.html
 
 
-  VerboseArgs=                
-  
-  #  Set =1  to normally display the qemu args, with okay dialogue, in human readable & before booting.  
+KVM_MSR_ModProbeFile="/etc/modprobe.d/kvm-quickemu.conf"
 
-  #  Set blank for log file only. In menu toggle also available. (A log file is always outputted to the VM's main folder) 
+# File for default KVM behaviour for unhandled machine-specific registers. 
+
+# Edit here if your OS locates 'modprobe.d' differently.  QMOD default is "/etc/modprobe.d/kvm-quickemu.conf"
 
 
-  ExtraArgs=
+   
 
-  #  Extra QEMU Args may be added here, if normally required. Also add ad hoc via the main menu.
+if [[ $1 == "QWRAP" ]] ; then
 
-  #  A simpler and improved method is possible in the mod script than with the original one. 
-
-  #  Format = "group quoted" with single-space separated elements eg:  ExtraArgs="-device tpm-tis,tpmdev=tpm0" 
-
-  #  See  https://qemu.readthedocs.io/en/latest/system/invocation.html
-
-  
-
-  Extra_QE_Params=
-
-  #  Extra quickemu parameters to be used at VM run time.  
+  #  Q-WRAP:  Extra quickemu parameters to be used at VM run time  
 
   #  Format = "group quoted" with single-space separated elements eg:  Extra_QE_Params="--full-screen  --status-quo" 
 
   #  See quickemu --help for full list   NB  not all options can be applicable  CAUTION 
 
-  #  Of note:  "--full-screen" only works with spice display ...   
+  #  Of note:  "--full-screen" only works with spice display ...  &&  will overide --screenpct
+
+  #  From quickemu 4.8, the value " --screenpct xx"  may be used on SDL, where xx is a value from 25 to 100  & Linux VM's only.
+
+  Extra_QE_Params="--screenpct 85"
 
 
-  KVM_MSR_ModProbeFile="/etc/modprobe.d/kvm-quickemu.conf"
+  ##  Q-WRAP  & 'quickemu' or 'quickget'  versioning:
 
-  # File for default KVM behaviour for unhandled machine-specific registers. ( REVIEW )
+  # For VM compatibility reasons, different quickemu/quickget versions maybe be needed.    
+
+  # D/L with 'wget  https://github.com/quickemu-project/quickemu/archive/refs/tags/4.7.zip' etc from a terminal opened in the target folder
   
-  # Edit here if your OS locates 'modprobe.d' differently.  QMOD default is "/etc/modprobe.d/kvm-quickemu.conf"
-
-
-fi
-
-if [[ $1 == "QWRAP" ]] ; then
-
-  # Path to script folder:  Leave blank to use quickemu system defaults.  
-
-  # Different versions maybe downloaded and stored in suggested format 'quickemu-42' 'quickemu-44'  etc
-
-  # Use 'wget  https://github.com/quickemu-project/quickemu/archive/refs/tags/4.7.zip' etc from a terminal opened in the Script folder
+  # Q-Wrap wise, these should generally be workable. Also different get/emu release/custom versions should be usable together as well. 
   
-  QE_ScriptFolder=              # eg  "/media/xxx/Files/VMQs/QE_ScriptFolder"  (no trailing slash)
+  # Suggested name format 'quickemu-42' 'quickget-44' 'QE-46' etc  ...  QE = quickemu   QG = quickget
 
-  QE_Version=                   # eg  "quickemu-42"
+  # LEAVE BLANK TO USE SYSTEM DEFAULTS  or give full path/filename  eg  QE_Version="/media/xxx/Files/VMQs/QE_ScriptFolder/quickemu-42" 
+
+  QE_Version=                   
+
+  QG_Version=                
 
 fi
 
 
 if [[ $1 == "QMOD" ]] ; then
 
-  # See section 'WINDOWS & HYPERVISOR' in this script for more details.
+  # QMOD ONLY.  See section 'WINDOWS & HYPERVISOR' in the QMOD script for more details.
 
-  # NB Version 1 only   #  TODO  && wrap
 
   WinHyperV_RC=               #  Windows Hypervisor Recipe.  Leave blank for defaults.  Otherwise, set "4.2" or "Custom" 
 
   #                           #  Edit / create / uncomment as needed. NB comma separated, no spaces.
+
 
   if [[ $WinHyperV_RC == "4.2" ]]; then
 
@@ -197,7 +178,8 @@ if [[ $1 == "QMOD" ]] ; then
 
   fi
 
-  ## DRIVE TRIM & HARDWARE
+
+  ## DRIVE TRIM & HARDWARE  (QMOD ONLY)
   
   # As noted in my comment https://github.com/quickemu-project/quickemu/issues/572#issuecomment-1313723715
 

@@ -30,11 +30,13 @@
 #   Users should install 'quickemu' and may set up Virtual Machines as normal.
 
 
-#  'q-wrap' may be installed alongside quickemu in /usr/bin  & run by typing 'qmod' or 'quickemu-wrap' 
+#  'q-wrap' may be installed alongside quickemu in /usr/bin  & run by typing 'qwrap' or 'quickemu-wrap' 
 
 #  Or may be placed elsewhere, including your desktop or the main VM folder where the vm.conf files are located. 
 
 #  Click on this script to run it, or open an in-folder terminal and use './quickemu-wrap'  (make sure it has execute permissions)
+
+#  @ 05/2023  qwrap may also be started by clicking on the .conf file if the standard first .conf line is edited to point to qwrap.
 
 #  This second mod re-writes the original quickemu-mod as a type of full wrapper script.
 
@@ -47,6 +49,7 @@
 #  If adding code, please refer to  http://mywiki.wooledge.org/BashGuide/Practices#Readability  
 
 
+
 ## ShellCheck global disables:
 
 # https://www.shellcheck.net/wiki/SC2242 as it clashes with use of exit traps used to keep mouse click scripts open
@@ -54,15 +57,57 @@
 #  shellcheck disable=SC2242
 
 
-ModVersion="2023.05.19"
+
+## Make sure shell is set during session to decimal separator of dot 
+
+#  LC_ALL=C changes too much, just set the numeric.
+
+#  See locale setting discussion:  https://unix.stackexchange.com/a/149129 
+
+#  Also  https://unix.stackexchange.com/questions/62316/why-is-there-no-euro-english-locale?rq=1
+
+#  &   http://www.unicode.org/L2/L2001/01102-POSIX15897.htm   
+
+
+export "LC_NUMERIC=C"
+
+export "LC_COLLATE=C"
+
+
+##  MOD:  Standard Quickemu checks for '< 4' which at 2022/3 now needs a bump. 
+
+#   Some ver 5 script is present in the standard release too ...
+
+#   More Version 5 style scripting should be used:
+
+#   See http://mywiki.wooledge.org/BashGuide/Practices#Choose_Your_Shell
+
+if ((BASH_VERSINFO[0] < 5)); then
+  printf "\n\n  Bash 5.0 or newer is needed to run this script."
+  exit 1
+fi
+
+if ! tput -V | grep -q ncurses 2> /dev/null; then
+  printf "\n\n  Check for your OS >  \n\n  An 'ncurses' installation should normally be present. Test using 'tput -V' "
+  exit 1
+fi
+
+
+## pre-empt some of quickemu's error messages
+
+QEMU=$(command -v qemu-system-x86_64)     
+QEMU_IMG=$(command -v qemu-img)
+
+
+if [[ ! $QEMU ]] || [[ ! $QEMU_IMG ]]; then
+  printf "\n\n QEMU not found. Check installations of qemu-system-x86_64 and qemu-img"
+  exit 1
+fi
+
+
+ModVersion="2023.07.05"
 
 ModName="$(basename "$0")"
-
-# API
-
-#   Use:  quickemu-mod  --mod.menu  "path/folder"  "file.conf"  for  direct calls that bypass of the array selector. 
-
-#   Or   --mod.conf   "file.conf"    for .conf files in the default VM folder
 
 
 
@@ -121,9 +166,6 @@ else
 fi
 
 
-if [[ $Q_Mod_SettingsFile ]] ; then echo; echo "  Using settings file $Q_Mod_SettingsFile" ; echo ; fi
-
-
 # Declare global associative VM ARRAY & other initializing global vars
 
 declare -gA VM_Array=()
@@ -143,7 +185,7 @@ if [[ -e "$Q_Mod_SettingsFile" ]]; then
 
 else
 
-  printf "\n\n  ERROR  'qmod_settings' file not found \n\n  Re-check Installation &/or Installation instructions \n\n"
+  printf "\n\n  ERROR  'qmod_settings' file not found \n\n  Re-check Installation &/or Installation instructions \n\n" ; sleep 10
   
 fi
 
@@ -152,47 +194,49 @@ fi
 
 [[ ! $Default_VM_Folder ]] && Default_VM_Folder="$CurrentFolder"
 
+# And create the list of preset VM locations 
 
-## Make sure shell is set during session to decimal separator of dot 
+VM_Folder_List=( "$CurrentFolder" "$Default_VM_Folder" )
 
-#  LC_ALL=C changes too much, just set the numeric.
+# shellcheck disable=SC2154
 
-#  See locale setting discussion:  https://unix.stackexchange.com/a/149129 
+for xF in "${Extra_VM_Folder[@]}"; do
 
-#  Also  https://unix.stackexchange.com/questions/62316/why-is-there-no-euro-english-locale?rq=1
+  [[ $xF ]] && VM_Folder_List+=("$xF")
 
-#  &   http://www.unicode.org/L2/L2001/01102-POSIX15897.htm   
-
-
-export "LC_NUMERIC=C"
-
-export "LC_COLLATE=C"
+done
 
 
-##  MOD  Standard Quickemu checks for '< 4' which at 2022/3 now needs a bump. 
+##  ADD QUICKGET:  Check and set the 'quickget' version, which is used in isolated wrapping mode.
 
-#   Some ver 5 script is present in the standard release too ...
+#   Quickemu gets absorb wrapped & uses the internal var "$VERSION" as its ref, so use that.
 
-#   More Version 5 style scripting should be used:
+[[ $QE_Version ]] && [[ ! $(type -p "$QE_Version") ]] &&  printf "\n\n  ERROR  quickemu not found \n\n  Re-check Installation &/or Installation instructions \n\n"  && sleep 10         
 
-#   See http://mywiki.wooledge.org/BashGuide/Practices#Choose_Your_Shell
-
-if ((BASH_VERSINFO[0] < 5)); then
-  printf "\n\n  Bash 5.0 or newer is needed to run this script."
-  exit 1
-fi
+[[ $QG_Version ]] && [[ ! $(type -p "$QG_Version") ]] &&  printf "\n\n  ERROR  quickget not found \n\n  Re-check Installation &/or Installation instructions \n\n"   && sleep 10         
 
 
-## pre-empt some of quickemu's error messages
+quickget() {
 
-QEMU=$(command -v qemu-system-x86_64)     
-QEMU_IMG=$(command -v qemu-img)
+  # finds the right version for the standard 'quickget' call 
+
+  if [[ $QG_Version ]]; then  eval command "$QG_Version" " $*"
+
+  else eval command quickget " $*" ; fi
+  
+}
 
 
-if [[ ! $QEMU ]] || [[ ! $QEMU_IMG ]]; then
-  printf "\n\n QEMU not found. Check installations of qemu-system-x86_64 and qemu-img"
-  exit 1
-fi
+# the version number, for display purposes
+
+QG_Wrapped_VerNumber="$(quickget "--version")"
+
+
+# find WRAPPING SOURCE   REVIEW  method?
+
+# source "$ModDir/quick-get-wrap"
+
+# [[ $(type -t function_quick_get_wrap) != "function" ]] && echo && function_conf_error  "function_quick_get_wrap not found"
 
 
 
@@ -238,7 +282,7 @@ show_mod_api_usage () {
 
   printf     "\n\n  Edit the first line of the .conf to point to q-wrap instead of quickemu"
 
-  printf     "\n\n  eg. #!/usr/bin/quickemu --vm  becomes  #!/usr/bin/qwrap --vm  (path/file will auto supply) "
+  printf     "\n\n  eg. #!/usr/bin/quickemu --vm  becomes  #!/usr/bin/qwrap --vm  or similar (VM name not needed)"
 
   printf     "\n\n  For more complex CLI usage, try the alternative 'q-mod' script or quickemu itself."
   
@@ -620,7 +664,7 @@ msrs_conflict_check_resolver() {
 
 # shellcheck disable=SC2154
 
-if [[ $QE_Version ]]; then QuickEmuSource="$QE_ScriptFolder/$QE_Version" ; else QuickEmuSource="/usr/bin/quickemu" ; fi
+if [[ $QE_Version ]]; then QuickEmuSource="$QE_Version" ; else QuickEmuSource="/usr/bin/quickemu" ; fi
 
 # shellcheck disable=SC2154
 
@@ -766,7 +810,7 @@ EOF
 
 
 
-## Now run the modded boot code
+## Now add the modded boot code
 
 source "/tmp/qmod-function-vm_boot-temp"
 
@@ -902,7 +946,488 @@ function quickemu {
 
 
 
-##  END of ADD-IN of ORIGINAL quickemu and such.  START MENU FUNCTIONS.
+##  WRAPPING FUNCTIONS FOR 'quickget' 
+
+#   Versioned, but INTENDED TO WORK FROM INSIDE 'quickemu-wrap'
+
+
+QGW_Version="2023.05.31"
+
+
+QGW_ArrList() {
+
+  # listing function for use inside 'function_quick_get_wrap'
+
+  declare -n QGW_List_ArrName="$1"
+
+  QGW_List_ArrNum=0
+
+  QGW_List_DisplayNum=1
+
+  QGW_List_NewLineCounter=1
+
+  for QGW_List_Arr_Item in "${QGW_List_ArrName[@]}" ; do
+
+    printf "  %2d)  %-18s  "  "$QGW_List_DisplayNum"  "$QGW_List_Arr_Item"
+
+    ((QGW_List_ArrNum+=1))
+
+    ((QGW_List_DisplayNum+=1))
+
+    ((QGW_List_NewLineCounter+=1))
+
+    [[ $QGW_List_NewLineCounter == "6" ]] &&  QGW_List_NewLineCounter=1   &&  printf "\n\n"
+
+  done
+
+}
+
+
+function_quick_get_wrap ()  {
+
+  printf "\033c"
+
+  printColor "\n\n  Quick Get Wrap Ver: %s "  "$QGW_Version"
+
+  # shellcheck disable=SC2154
+
+  printf "  Wrapping quickget version %s  (selection of some distro's will require live version data) \n\n\n" "$QG_Wrapped_VerNumber"
+
+ 
+  tput sc
+  echo 
+  echo "  Checking connections ..." ; echo
+
+  InternetUp=
+  IgnoreInternet=
+
+  while [[ ! $InternetUp ]]; do   
+
+    if  ( ping -w 2  1.1.1.1 | grep -q ttl ) 2> /dev/null ; then
+
+      InternetUp=1
+
+    elif ( ping -w 2  8.8.8.8  | grep -q ttl ) 2> /dev/null ; then
+
+      InternetUp=1
+
+    else
+
+      printColor "\n\n  INTERNET CONNECTION NOT FOUND. Check settings and equipment \n\n"
+
+      read -rp "  press [enter] to retry, [i] ignore & go to main menu >  "   IgnoreInternet
+
+      echo
+
+      [[ $IgnoreInternet == "i" ]] &&  QGW_List_NumSelected="b"  && break   
+
+    fi
+
+  done
+
+
+  if [[ ! $IgnoreInternet ]]; then 
+
+    tput rc; tput ed  
+
+    QGW_OS_ListRaw="$(quickget | tail -n +2 )"
+
+    QGW_OS_ListString="${QGW_OS_ListRaw/'- Operating Systems: '/}"
+
+    read -ra QGW_OS_Array <<< "$QGW_OS_ListString"
+
+    QGW_ArrList  "QGW_OS_Array"
+
+    printColor "\n\n\n  Give list NUMBER of OS name to select for download  [b] to go back \n\n"    
+
+    read -rp "  >  "  QGW_List_NumSelected
+
+  fi
+
+  if [[ $QGW_List_NumSelected == "b" ]]; then 
+  
+    QGW_List_NumSelected=
+
+    return
+
+  else
+
+    [[ $QGW_List_NumSelected -gt "${#QGW_OS_Array[@]}" ]] && QGW_List_NumSelected="${#QGW_OS_Array[@]}"
+
+    QGW_OS_Arr_NumSelected=$((QGW_List_NumSelected-1))
+
+    QGW_OS_Arr_NameSelected="${QGW_OS_Array[QGW_OS_Arr_NumSelected]}"
+
+    printColor  "\n\n  Selected = %s "  "$QGW_OS_Arr_NameSelected"
+
+  fi
+
+  #
+
+  QGW_Releases_ListRaw="$(quickget "$QGW_OS_Arr_NameSelected" | tail -n +2 | grep Releases)"
+
+  QGW_Releases_ListString="${QGW_Releases_ListRaw/'- Releases: '/}"
+
+  read -ra QGW_Releases_Array <<< "$QGW_Releases_ListString"
+
+  if [[ ${#QGW_Releases_Array[@]} -eq 1 ]] ; then
+
+   printf "\n\n  Only one current release found: "
+
+   QGW_Release_Arr_NameSelected="${QGW_Releases_Array[0]}"
+
+  else
+
+    printf "\n\n"
+
+    QGW_ArrList  "QGW_Releases_Array"
+
+    printColor "\n\n  Give LIST number of Release   [b] to go back \n\n"     
+
+    read -rp "  >  "  QGW_List_NumSelected    
+
+    if [[ $QGW_List_NumSelected == "b" ]]; then 
+
+      QGW_List_NumSelected= 
+
+      QGW_OS_Arr_NameSelected=
+    
+      function_quick_get_wrap
+
+    else
+
+      [[ $QGW_List_NumSelected -gt "${#QGW_Releases_Array[@]}" ]] && QGW_List_NumSelected="${#QGW_Releases_Array[@]}"
+
+      QGW_Release_Arr_NumSelected=$((QGW_List_NumSelected-1))
+
+      QGW_Release_Arr_NameSelected="${QGW_Releases_Array[QGW_Release_Arr_NumSelected]}"
+
+    fi
+
+  fi
+
+  printColor  "\n\n  Selected = %s %s "  "$QGW_OS_Arr_NameSelected" "$QGW_Release_Arr_NameSelected"
+
+  #
+
+  QGW_Editions_ListRaw="$(quickget "$QGW_OS_Arr_NameSelected" | tail -n +2 | grep Editions)"
+
+  QGW_Editions_ListString="${QGW_Editions_ListRaw/'- Editions: '/}"
+
+  QGW_Editions_ListTest="$(tr -d '[:space:]' <<< "$QGW_Editions_ListString" )"
+
+  if [[ $QGW_Editions_ListTest ]]; then
+
+    read -ra QGW_Editions_Array <<< "$QGW_Editions_ListString"
+
+    if [[ ${#QGW_Editions_Array[@]} -eq 1 ]] ; then
+
+    printf "\n\n  Only one current edition found: "
+
+    QGW_Edition_Arr_NameSelected="${QGW_Editions_Array[0]}"
+
+    else
+
+      printf "\n\n"
+
+      QGW_ArrList  "QGW_Editions_Array"
+
+      printColor "\n\n  Give LIST number of Edition   [b] to go back \n\n"  
+
+      if [[ $QGW_OS_Arr_NameSelected == "fedora" ]]  && [[ $QGW_Release_Arr_NameSelected == "33" ]] || [[ $QGW_Release_Arr_NameSelected == "34" ]]; then 
+      
+        printf "  Note: Fedora 33 i3 and Fedora 34 Cinnamon are not possible \n\n"
+
+      fi
+
+      read -rp "  >  "  QGW_List_NumSelected   
+
+      if [[ $QGW_List_NumSelected == "b" ]]; then  
+
+        QGW_List_NumSelected=
+        QGW_OS_Arr_NameSelected=
+        QGW_Release_Arr_NameSelected=
+      
+        function_quick_get_wrap
+
+      else
+
+        [[ $QGW_List_NumSelected -gt "${#QGW_Editions_Array[@]}" ]] && QGW_List_NumSelected="${#QGW_Editions_Array[@]}"
+    
+        QGW_Edition_Arr_NumSelected=$((QGW_List_NumSelected-1))
+
+        QGW_Edition_Arr_NameSelected="${QGW_Editions_Array[QGW_Edition_Arr_NumSelected]}"
+
+      fi
+
+    fi
+
+  else
+
+    QGW_Edition_Arr_NameSelected=
+
+    printf "\n\n  Further selection not available"
+
+  fi
+
+
+  QGW_DownloadSelection="$QGW_OS_Arr_NameSelected  $QGW_Release_Arr_NameSelected  $QGW_Edition_Arr_NameSelected"
+  
+  printColor  "\n\n  Selected =   %s "  "$QGW_DownloadSelection"
+
+  i=0
+
+  while [[ ${VM_Folder_List[i]} ]]; do
+
+    if [[ $i -eq 0 ]]; then printf "\n\n\n  [0]  %s (current)"  "${VM_Folder_List[i]}"
+
+    elif [[ $i -eq 1 ]]; then printf "\n\n  [1]  %s (default)"  "${VM_Folder_List[i]}"
+
+    else printf "\n\n  [%s]  %s "  "$i" "${VM_Folder_List[i]}"
+
+    fi
+
+    ((i +=1))
+
+  done
+
+  printf "\n\n\n"
+
+  QWG_DownLoadFolder="$Default_VM_Folder"
+  
+  while true ; do
+
+    printf "  Installation target folder:  %s "   "$QWG_DownLoadFolder"  
+
+    printColor  "\n\n  [enter] Start the download  [number] select a different (preset or current) folder  [h] help  [b] go back \n\n"
+
+    read -rp "  >  " QGW_DownloadStart
+
+     printf "\n"
+
+     case "$QGW_DownloadStart" in
+
+      b)
+        QGW_List_NumSelected=
+        QGW_OS_Arr_NameSelected=
+        QGW_Release_Arr_NameSelected=
+        QGW_DownloadStart=
+        QGW_DownloadSelection=
+
+        break
+      ;;
+
+
+      0|1|2|3) QWG_DownLoadFolder="${VM_Folder_List[QGW_DownloadStart]}" 
+      
+      ;;
+
+      h) printf "\n\n  Once the download and initial setup up has finished, the new folder and .conf file may be easily moved\n\n  and/or edited before running."
+
+      ;;
+
+      *)
+        QGW_DownloadStart="start"
+        break
+      ;;
+
+    esac
+
+    [[ ! $QWG_DownLoadFolder ]] &&  QWG_DownLoadFolder="$Default_VM_Folder" 
+
+  done
+
+
+  if [[ $QGW_DownloadStart == "start" ]]; then
+
+    QGW_DownloadStart=
+    QGW_DownloadStopped=
+    QGW_Esc=
+    
+    cd "$QWG_DownLoadFolder"  ||  function_conf_error  "FOLDER not accessible: $QWG_DownLoadFolder"
+
+    
+    printf "\n\n  Once a download and initial setup up has finished, the new folder and .conf file may be easily moved\n\n  and/or edited before running.\n\n"
+
+    printColor "\n\n  [enter] to kill ALL downloads \n\n"
+
+    ## Although quickget will run as a background process, quickget will then go on to run aria2 etc 
+
+    #  but as even further into the background. The download programs will grab the cursor in order to report progress
+    
+    #  and as this will compete with read & keyboard input we are limited to using [enter] ....
+
+    quickget "$QGW_DownloadSelection" &
+
+        
+    while true; do
+
+      sleep 2
+      
+      if  pgrep aria2 || pgrep curl || pgrep wget ; then 
+
+        read -r 
+
+        printColor "\n\n  [enter] kills ALL current downloads (ignore to cancel) \n\n"
+
+        read -r 
+
+        pkill aria2
+        pkill curl
+        pkill wget 
+
+        QGW_DownloadStopped=1
+
+        sleep 1
+
+        break
+
+      else
+
+        sleep 1
+
+        printColor "\n\n  [c] to return or continue \n\n "
+
+        read -rp "  >  "  QGW_Esc
+
+        [[ $QGW_Esc == "c" ]] && break
+
+      fi
+
+    done
+
+  fi
+
+
+  New_VM_Folder=
+ 
+  if [[ -d "${QWG_DownLoadFolder}/${QGW_OS_Arr_NameSelected}-${QGW_Release_Arr_NameSelected}-${QGW_Edition_Arr_NameSelected}" ]]; then 
+
+    New_VM_Folder="${QGW_OS_Arr_NameSelected}-${QGW_Release_Arr_NameSelected}-${QGW_Edition_Arr_NameSelected}"
+
+  elif [[ -d "${QWG_DownLoadFolder}/${QGW_OS_Arr_NameSelected}-${QGW_Release_Arr_NameSelected}" ]]; then 
+
+    New_VM_Folder="${QGW_OS_Arr_NameSelected}-${QGW_Release_Arr_NameSelected}"
+
+  elif [[ -d "${QWG_DownLoadFolder}/${QGW_OS_Arr_NameSelected}" ]]; then 
+
+    New_VM_Folder="${QGW_OS_Arr_NameSelected}"
+
+  fi
+
+
+   New_VM_File=
+
+  if [[ -f "${QWG_DownLoadFolder}/${QGW_OS_Arr_NameSelected}-${QGW_Release_Arr_NameSelected}.conf" ]]; then 
+
+    New_VM_File="${QWG_DownLoadFolder}/${QGW_OS_Arr_NameSelected}-${QGW_Release_Arr_NameSelected}.conf"
+
+  elif [[ -f "${QWG_DownLoadFolder}/${QGW_OS_Arr_NameSelected}.conf" ]]; then 
+
+    New_VM_File="${QGW_OS_Arr_NameSelected}.conf"
+
+  fi
+
+
+  QGW_FolderDelete=
+
+  if [[ $New_VM_Folder ]]; then
+  
+    printColor "\n\n  Folder created:  %s "  "$New_VM_Folder"
+
+    if [[ ! $New_VM_File ]]; then
+
+      if [[ $QGW_DownloadStopped ]]; then printf "\n\n  Download Stopped > Residual files may need tidying"
+
+      else  printf "\n\n  As there is no .conf file, there may have been an ERROR >" ; fi
+
+      printColor "\n\n  Folder contents: \n\n"
+
+      ls "$New_VM_Folder"
+
+      printf "\n\n  [enter] to ignore & continue "
+      
+      printColor " [d] delete the folder"
+
+      printf "\n\n"
+
+      read -rp "  >  "    QGW_FolderDelete
+
+      if [[ $QGW_FolderDelete == "d" ]]; then
+      
+        printf "\n\n  Folder being deleted ... "
+
+        rm -f -r "$New_VM_Folder"
+
+      else  printColor  "  Folder retained"
+
+      fi
+
+    fi
+
+  fi
+
+
+  QGW_ConfEdit=
+
+  if [[ $New_VM_File ]]; then
+
+    printColor "\n\n  Config file created: \n\n"
+
+    cat "$New_VM_File"
+
+    printColor "\n\n  So far, so good  >  "
+
+    printf "\n\n  The start line may be edited to point to quickemu-wrap" 
+
+    printf "\n\n  Suggest disk_size=\"32G\" or higher if expecting to create snapshots" 
+
+    if [[ $QGW_OS_Arr_NameSelected =~ "windows" ]]; then
+    
+      printColor "\n\n  Windows: needs tpm=\"on\" secureboot=\"on\""
+
+      printf "\n\n  Set disk_size=\"128G\" (recommended)"
+      printf "\n\n  plus set other vals high eg cpu_cores=\"12\" ram=\"10G\" "
+
+    fi
+
+
+    printColor "\n\n\n  [enter] to return   [e] edit the config file "
+
+    printf "\n\n"
+
+    read -rp "  >  "   QGW_ConfEdit
+  
+    if [[ $QGW_ConfEdit ]]; then 
+    
+      qmod_edit_settings  "new_conf"
+
+      cat "$New_VM_File"
+
+      echo
+
+    fi
+
+  else
+
+    printColor "\n\n  [enter] to return or continue \n\n" 
+    read -rp "  > "
+
+  fi
+
+  
+
+
+  # return back to any working directory if one had already been set
+
+  if [[ $VM_Conf_Dir ]]; then cd "$VM_Conf_Dir"  || function_conf_error  "Quickget-Wrap Working Directory NOT FOUND ," ; fi
+
+}
+
+
+
+
+##  END of ADD-IN of ORIGINAL QUICKEMU and setting up the QUICKGET wrapper.  START MENU FUNCTIONS:
 
 
 
@@ -910,11 +1435,11 @@ function_conf_error () {
 
   ErrorMenuSelect=
 
-  printf "\n\n  ERROR  Quickemu-Wrap Settings, VM folder & conf file(s)"
+  printf "\n\n  Quickemu-Wrap Settings, VM folder & conf file(s)"
 
-  if [[ $1 ]] ; then printf "\n\n  Please check %s settings, location & content ... \n\n"  "$1"
+  if [[ $1 ]] ; then printf "\n\n  Check %s settings, location & content ... \n\n"  "$1"
 
-  else printf "\n\n  Please check the settings and re-run this script ... \n\n" ; fi
+  else printf "\n\n  Check the settings and re-run this script ... \n\n" ; fi
   
   if [[ "$1" == *'COMMAND'* ]]; then 
   
@@ -923,8 +1448,11 @@ function_conf_error () {
     printf "  [enter] to view/edit settings file \n\n"
 
   elif [[ $1 == "folder" ]] && [[ $(ls "$VM_InstanceName"/*.iso 2> /dev/null) ]]; then 
-   
-    printColor "\n\n  [e] edit the new setup .conf file  [i] ignore ...  "
+
+    echo
+    cat "$VM_Conf_File"
+     
+    printColor "\n\n  NEW SETUP:  [e] edit the .conf file  [c] continue with current settings  "
 
     [[ "$VM_InstanceName" =~ 'windows' ]] && printf "\n\n  128G disk size edit recommended, plus make sure tpm and secure boot are on"
 
@@ -936,20 +1464,20 @@ function_conf_error () {
 
   [[ $ErrorMenuSelect == "q" ]] && printf "\n\n" && command exit 
 
-  if [[ $ErrorMenuSelect == "i" ]] || [[ $ErrorMenuSelect == "e" ]]; then  
+  if [[ $ErrorMenuSelect == "c" ]] || [[ $ErrorMenuSelect == "e" ]]; then  
   
     SelectArrayError=
     IgnoreFolderCheck=1
 
     if [[ $ErrorMenuSelect == "e" ]]; then 
 
-      printf "\n\n  If editing the 'hash bang' to 'wrap' mode, use the following pattern:"
+      printf "\n\n  To auto-run  quickemu-wrap / qwrap :"
 
-      printf "\n\n   #!/usr/bin/quickemu --vm  becomes  #!/usr/bin/qwrap --vm  (path/file will auto supply) "
+      printf "\n\n  #!/usr/bin/quickemu --vm   becomes   #!/usr/bin/quickemu-wrap --vm   #!/usr/bin/qwrap --vm   or similar "
 
-      printf "\n\n"
+      printColor "\n\n  [enter] to continue \n\n"
 
-      read -rp "  [enter] to continue  >  "
+      read -rp "  >  "
     
       qmod_edit_settings  "conf"
 
@@ -1013,55 +1541,28 @@ function_Scan_VM_folders () {
 
   #   Adds via calls to 'function_VM_array_add_confs'
 
+  i=0
 
-  CurrentFolder_Conf_String="$(ls "$CurrentFolder/"*.conf 2> /dev/null)"
+  while [[ ${VM_Folder_List[i]} ]]; do
 
-  CurrentFolder_Conf_String=${CurrentFolder_Conf_String//"$CurrentFolder/"/}
+    FolderPathName="${VM_Folder_List[i]}"
 
-  mapfile -t  CurrentFolder_Conf_Array  <<< "$CurrentFolder_Conf_String"
+    Folder_Conf_String="$(ls "$FolderPathName/"*.conf 2> /dev/null)"
 
+    Folder_Conf_String=${Folder_Conf_String//"$FolderPathName/"/}
 
-  if [[ $Default_VM_Folder != "$CurrentFolder" ]]; then
+    mapfile -t  Folder_Conf_Array  <<< "$Folder_Conf_String"
 
-    DefaultFolder_Conf_String="$(ls "$Default_VM_Folder/"*.conf 2> /dev/null)"
-    DefaultFolder_Conf_String=${DefaultFolder_Conf_String//"$Default_VM_Folder/"/}
-    mapfile -t  DefaultFolder_Conf_Array  <<< "$DefaultFolder_Conf_String"
+    if [[ ${Folder_Conf_Array[0]} ]]; then 
 
-  fi
+      for TestFile in "${Folder_Conf_Array[@]}"; do function_VM_array_add_confs  "$FolderPathName" "$TestFile" ; done
 
-  if [[ $Second_VM_Folder ]] && [[ $Second_VM_Folder != "$CurrentFolder" ]]; then
+    fi
 
-    SecondFolder_Conf_String="$(ls "$Second_VM_Folder/"*.conf 2> /dev/null)"
-    SecondFolder_Conf_String=${SecondFolder_Conf_String//"$Second_VM_Folder/"/}
-    mapfile -t  SecondFolder_Conf_Array  <<< "$SecondFolder_Conf_String"
+    ((i +=1))
 
-  fi
-
-  if [[ $Third_VM_Folder ]] && [[ $Third_VM_Folder != "$CurrentFolder" ]]; then
-
-    ThirdFolder_Conf_String="$(ls "$Third_VM_Folder/"*.conf 2> /dev/null)"
-    ThirdFolder_Conf_String=${ThirdFolder_Conf_String//"$Third_VM_Folder/"/}
-    mapfile -t  ThirdFolder_Conf_Array  <<< "$ThirdFolder_Conf_String"
-
-  fi
-
-
-  if [[ ${CurrentFolder_Conf_Array[0]} ]]; then 
-    for TestFile in "${CurrentFolder_Conf_Array[@]}"; do function_VM_array_add_confs  "$CurrentFolder" "$TestFile" ; done
-  fi
-
-  if [[ ${DefaultFolder_Conf_Array[0]} ]]; then 
-    for TestFile in "${DefaultFolder_Conf_Array[@]}"; do function_VM_array_add_confs  "$Default_VM_Folder" "$TestFile" ; done
-  fi
-
-  if [[ ${SecondFolder_Conf_Array[0]} ]]; then 
-    for TestFile in "${SecondFolder_Conf_Array[@]}"; do function_VM_array_add_confs  "$Second_VM_Folder" "$TestFile" ; done
-  fi
-
-  if [[ ${ThirdFolder_Conf_Array[0]} ]]; then 
-    for TestFile in "${ThirdFolder_Conf_Array[@]}"; do function_VM_array_add_confs  "$Third_VM_Folder" "$TestFile" ; done
-  fi
-
+  done
+  
 
   if [[ ! ${VM_Array[0,0]} ]] ; then
     function_conf_error  "VM ARRAY - No VMs found?"
@@ -1069,6 +1570,7 @@ function_Scan_VM_folders () {
   fi
 
 }
+
 
 
 function_list_conf_array () {
@@ -1089,9 +1591,24 @@ function_list_conf_array () {
 
     else
 
-        if [[ -e "${VM_Array[$VM_List_Num,0]}/${VM_Array[$VM_List_Num,1]}" ]]; then 
+      if [[ -e "${VM_Array[$VM_List_Num,0]}/${VM_Array[$VM_List_Num,1]}" ]]; then 
 
-        [[ ! $ByPass_VM_Array_Selector ]] && printf "\n\n %2d  %s " "$VM_List_Num" "${VM_Array[$VM_List_Num,0]}/${VM_Array[$VM_List_Num,1]}"
+        if [[ ! $ByPass_VM_Array_Selector ]]; then
+
+          QcowTarget=
+
+          QcowTarget="$(grep 'disk_img' "${VM_Array[$VM_List_Num,0]}/${VM_Array[$VM_List_Num,1]}" 2> /dev/null)"
+
+          QcowTarget="${QcowTarget/'disk_img='/}"
+
+          QcowTarget="${QcowTarget//'"'/}"
+
+          if [[ ! -e "${VM_Array[$VM_List_Num,0]}/$QcowTarget" ]]; then  
+            printColor "\n\n %2d  %s  (new)" "$VM_List_Num" "${VM_Array[$VM_List_Num,0]}/${VM_Array[$VM_List_Num,1]}"
+          else
+            printf "\n\n %2d  %s " "$VM_List_Num" "${VM_Array[$VM_List_Num,0]}/${VM_Array[$VM_List_Num,1]}"
+          fi
+        fi
 
       else
 
@@ -1152,7 +1669,7 @@ function_Select_VM () {
 
     function_list_conf_array
     
-    printf "\n\n\n\n  [number] to select a VM    [q] to quit "
+    printf "\n\n\n\n  [number] to select a VM   [gt] quickget a new distro   [q] to quit "
 
     printColor "\n\n  [Enter]  to select %s (VM 0)"  "${VM_Array[0,1]}"
 
@@ -1162,6 +1679,18 @@ function_Select_VM () {
 
 
     [[ $VM_Selection == "q" ]] && echo && exit directly 
+
+    if [[ $VM_Selection == "gt" ]]; then
+
+      VM_Selection=
+      function_quick_get_wrap 
+
+      ByPass_VM_Array_Loader=
+      printf "\033c"
+      show_qmod_title
+      return
+
+    fi
 
     [[ ! $VM_Selection ]] &&  VM_Selection=0  
 
@@ -1387,6 +1916,10 @@ qmod_edit_settings() {
 
       "$TextEditor" "$VM_Conf_Dir/$VM_Conf_File"  2> /dev/null 
 
+    elif [[ $1 == "new_conf" ]]; then
+
+      "$TextEditor" "$New_VM_File"  2> /dev/null 
+
     else 
 
       "$TextEditor" "$Q_Mod_SettingsFile"  2> /dev/null 
@@ -1465,7 +1998,7 @@ show_qmod_title() {
 
   printColor "\n\n  Quickemu Mod - Virtual Machine Launcher  Wrap Version %s"  "$ModVersion"
 
-    printf "\n\n  Currently wrapping quickemu %s"  "$VERSION"
+    printf "\n\n  Currently wrapping:   quickemu %s  &  quickget %s"  "$VERSION"  "$QG_Wrapped_VerNumber"
 
     [[ $VerboseArgs ]] && printf  "  (Verbose Args)"
     
@@ -1589,6 +2122,7 @@ if [[ $MultiInstanceCount -gt 1 ]]; then
 fi
 
 
+
 # MAIN MENU  (select VM then choose actions to do)
 
 while true ; do
@@ -1667,9 +2201,12 @@ while true ; do
     
     if [[ $ShowUtilsMenu ]]; then
 
+
       print_kvm_status
 
       printf "\n"
+
+      if [[ $Q_Mod_SettingsFile ]] ; then echo; echo "  Using settings file $Q_Mod_SettingsFile" ;  fi
 
       if [[ $VerboseArgs ]]; then printf  "\n\n  [v]   hide verbose qemu args"	
 
@@ -1703,6 +2240,8 @@ while true ; do
 
 
     printf "\n"
+
+    printf  "\n\n  [gt]  quickget a new distro"
 
     printf  "\n\n  [h]   show help & info   [set] open settings file in text editor "
 
@@ -1765,6 +2304,10 @@ while true ; do
   elif [[ $MainMenuChoice == "set" ]] ; then
 
     qmod_edit_settings
+
+  elif [[ $MainMenuChoice == "gt" ]] ; then
+
+    function_quick_get_wrap
 
   elif [[ $MainMenuChoice == "m" ]] ; then
 
@@ -1933,7 +2476,7 @@ while true ; do
 
     if [[ ! ${VM_Array[0,0]} ]]; then
 
-      # Re-Read settings file & QWRAP sections:   #   FIXME   on conf boot, arrays not present 
+      # Re-Read settings file & QWRAP sections:   
       # shellcheck disable=SC1090
       . "$Q_Mod_SettingsFile"  QWRAP
     fi

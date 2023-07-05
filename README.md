@@ -1,10 +1,15 @@
-# quickemu-mod  / quickemu-tools
+# quickemu-mod  / quickemu-wrap
 
-## Choose the full modded run-time, or just the tool set
+## Quickemu / Quickget wrapping script
+
+@2023/07/05  
+
+- Now features full wrapping of both Quickemu & Quickget
+- Improved settings file gives selectable versioning & non-limited VM folders
 
 ### Command line power with graphical ease
 
-- Replaces quickgui (runtime monitoring)
+- Alternative to quickgui for more advanced users
 - Simple mouse click start
 - Improves Windows boot up
 - Full & extra diagnostics
@@ -89,6 +94,11 @@ No densely packed lines of unexplained regex style hieroglyphics, please.
 <http://mywiki.wooledge.org/BashGuide/Practices#Readability>
 
 ## Changes
+
+@2023/07/05  
+
+- Now features full wrapping of both Quickemu & Quickget
+- Improved settings file gives selectable versioning & non-limited VM folders
 
 \@ 2023-06-20  From quickemu 4.8, the value " --screenpct xx"  may be used on SDL, where xx is a value from 25 to 100   (Linux VM's only)   This currently should be added to the settings file eg. `Extra_QE_Params="--screenpct 85"`
 

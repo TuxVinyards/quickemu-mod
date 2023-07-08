@@ -99,6 +99,10 @@ No densely packed lines of unexplained regex style hieroglyphics, please.
 
 ## Changes
 
+\@2023.07.08  
+
+- Add more options to the Extra Qemu Args menu interface
+
 \@2023/07/05  
 
 - Now features full wrapping of both Quickemu & Quickget

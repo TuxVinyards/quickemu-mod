@@ -105,7 +105,7 @@ if [[ ! $QEMU ]] || [[ ! $QEMU_IMG ]]; then
 fi
 
 
-ModVersion="2023.07.05"
+ModVersion="2023.07.08"
 
 ModName="$(basename "$0")"
 
@@ -205,6 +205,11 @@ for xF in "${Extra_VM_Folder[@]}"; do
   [[ $xF ]] && VM_Folder_List+=("$xF")
 
 done
+
+
+# Record any set ExtraArgs in case of need to reset
+
+ExtraSetArgs="$ExtraArgs"
 
 
 ##  ADD QUICKGET:  Check and set the 'quickget' version, which is used in isolated wrapping mode.
@@ -2216,9 +2221,9 @@ while true ; do
 
       printf  "\n\n  [xa]  add extra qemu args  [m] toggle msrs "
 
-      printf  "\n\n  [u]   hide utils & technical   [hdw]  Add current config to QemuVirtHardwareRecord list"
+      printf  "\n\n  [u]   hide utils & technical   [hdw]  Add current config to this VM's Virtual Hardware Record"
     
-      [[ $ExtraArgs ]] && printf  "   Current Extra: \n\n  %s"  "$ExtraArgs"
+      [[ $ExtraArgs ]] && printf  "\n\n  Extra Args:  %s"  "$ExtraArgs"
 
       printf "\n"
 
@@ -2491,16 +2496,42 @@ while true ; do
     MenuXA_Correct=
 
     printColor "\n\n  Give extra qemu arguments to use "
-    printf     "\n\n  Format = \"group quoted\" with space separated elements "
-    printf     "\n\n  eg.  -device  tpm-tis,tpmdev=tpm0 \n\n"
+    printf     "\n\n  Format = grouped & with space separated elements "
+    printf     "\n\n  eg.  -device  tpm-tis,tpmdev=tpm0 "
+
+    [[ $ExtraSetArgs ]] && printf  "\n\n  Extra Set Args:  %s"  "$ExtraSetArgs"
+
+    if [[ $ExtraArgs ]] && [[ "$ExtraArgs" != "$ExtraSetArgs" ]]; then
+    
+      printf  "\n\n  Extra Args:  %s"  "$ExtraArgs"
+
+      if [[ $ExtraSetArgs ]]; then printf "\n\n  [r] reset back to Set Args only "
+
+      else printf "\n\n  [r] remove the Extra Args " ; fi
+
+    fi
+
+    printf "\n\n"
+
     read -rp "  > "  MenuXA
 
-    printf "\n\n  %s %s"  "$ExtraArgs" " $MenuXA"
+    if [[ $MenuXA != "r" ]]; then
 
-    printf "\n\n  Is this correct y/n ? \n\n"
-    read -rp "  >  "  MenuXA_Correct
+      printf "\n\n  %s %s"  "$ExtraArgs" " $MenuXA"
 
-    [[ $MenuXA_Correct != "n" ]] &&  ExtraArgs="$ExtraArgs $MenuXA"
+      printf "\n\n  Is this correct y/n ? \n\n"
+
+      read -rp "  >  "  MenuXA_Correct
+
+    fi
+
+    
+
+    if [[ $MenuXA_Correct == "n" ]]; then printColor "\n\n  Ignoring the entered Qemu Args \n\n" ; sleep 1.5 
+
+    elif [[ $MenuXA == "r" ]]; then printColor "\n\n  Resetting \n\n" ; ExtraArgs="$ExtraSetArgs" ; sleep 1 
+    
+    else  ExtraArgs="$ExtraArgs $MenuXA" ; fi
 
     printf "\033c\n\n"
 

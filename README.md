@@ -103,6 +103,10 @@ No densely packed lines of unexplained regex style hieroglyphics, please.
 
 ## Changes
 
+\@2023.07.15  
+
+- Improve the quickget process control.  Also includes the starts of qqX, which is 'coming-soon'
+
 \@2023.07.08  
 
 - Add more options to the Extra Qemu Args menu interface

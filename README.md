@@ -5,7 +5,7 @@
 - Now features full wrapping of both Quickemu & Quickget
 - Improved settings file gives selectable quickemu versioning & non-limited VM folders
 
-\@2023/07/18 
+\@2023/07/18
 
 - Adds a delete to trash function.  Fix some consequent array re-scan bugs.
 
@@ -105,7 +105,7 @@ No densely packed lines of unexplained regex style hieroglyphics, please.
 
 ## Changes
 
-\@2023.07.18 
+\@2023.07.18
 
 - Add a delete to trash function.  Fix some consequent array re-scan bugs.
 

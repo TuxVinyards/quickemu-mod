@@ -2,10 +2,12 @@
 
 ## Quickemu / Quickget wrapping script
 
-\@2023/07/05  
-
 - Now features full wrapping of both Quickemu & Quickget
-- Improved settings file gives selectable versioning & non-limited VM folders
+- Improved settings file gives selectable quickemu versioning & non-limited VM folders
+
+\@2023/07/18 
+
+- Adds a delete to trash function.  Fix some consequent array re-scan bugs.
 
 ### Command line power with graphical ease
 

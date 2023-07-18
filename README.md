@@ -103,6 +103,10 @@ No densely packed lines of unexplained regex style hieroglyphics, please.
 
 ## Changes
 
+\@2023.07.18 
+
+- Add a delete to trash function.  Fix some consequent array re-scan bugs.
+
 \@2023.07.15  
 
 - Improve the quickget process control.  Also includes the starts of qqX, which is 'coming-soon'

@@ -53,7 +53,7 @@ Extra_VM_Folder+=("")
 
 # VM_Array[0,0]="/media/xxx/Storage/VMQs" ; VM_Array[0,1]="windows-11.conf"
 
-# VM_Array[1,0]="/media/xxx/Storage/VMQs/Insider" ; VM_Array[1,1]="windows-11.conf"
+# VM_Array[1,0]="/media/xxx/Storage/VMQs" ; VM_Array[1,1]="windows-insider.conf"
 
 # VM_Array[2,0]="$Default_VM_Folder" ; VM_Array[2,1]="macos-catalina.conf"
 

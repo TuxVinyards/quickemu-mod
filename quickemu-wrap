@@ -120,19 +120,18 @@ if [[ ! $QEMU ]] || [[ ! $QEMU_IMG ]]; then
 fi
 
 
-ModVersion="2023.07.15"
+ModVersion="2023.07.18"
 
 ModName="$(basename "$0")"
 
 if [[ $ModName == "qqx" || $ModName == "qqX" ]]; then ModName_qqX=1 ; fi
 
 
-
 # SETTINGS   
 
-#  If placing the main file in /usr/bin, then place the settings file as "/$HOME/.qmod_settings"
+#  If placing the main file in /usr/bin,"
 
-#  OR if qqX in "/$HOME/.qqX/qqX_settings"
+#  then place the settings file as "/$HOME/.qmod_settings, OR if qqX in "/$HOME/.qqX/qqX_settings"
 
 #  For details, see notes at start of the settings file ...
 
@@ -143,9 +142,30 @@ if [[ $ModName == "qqx" || $ModName == "qqX" ]]; then ModName_qqX=1 ; fi
 #  this would be expected to be where the specified wrap script is located as a first check
 
 
-if [[ "$1" == ?'-vm' ]]; then  
+if [[ $1 == "XDG" ]]; then 
 
-  Specified_SettingsFolder="$(dirname "$0")"
+  # .desktop start  (belt & braces)
+
+  cd "$HOME"  || printf "\n\n XDG .desktop > HOME Folder not found " 
+
+  if [[ $(pwd) != "$HOME" ]]; then
+
+    printf "\n\n XDG .desktop > HOME Folder not found "
+    sleep 3
+    exit 1
+
+  else
+
+    CurrentFolder="$(pwd)"
+    shift
+
+  fi
+
+elif [[ "$1" == ?'-vm' ]]; then  
+
+  # where test [[ $Conf_TriggerFolder ]] will also flag up if the script was .conf target started
+
+  Conf_TriggerFolder="$(dirname "$0")"
   
   CurrentFolder="$(dirname "$2")"
 
@@ -162,9 +182,9 @@ else SettingsName="qmod_settings" ; fi
 
 
 
-if [[ -e "$Specified_SettingsFolder/${SettingsName}" ]] && [[ "$CurrentFolder" != '/usr'* ]]; then  
+if [[ $Conf_TriggerFolder ]] && [[ -e "$Conf_TriggerFolder/${SettingsName}" ]]; then  
 
-  Q_Mod_SettingsFile="$Specified_SettingsFolder/${SettingsName}"
+  Q_Mod_SettingsFile="$Conf_TriggerFolder/${SettingsName}"
 
 elif [[ -e "$CurrentFolder/${SettingsName}" ]] && [[ "$CurrentFolder" != '/usr'* ]]; then  
 
@@ -178,21 +198,21 @@ elif [[ -e "$CurrentFolder/.${SettingsName}" ]] && [[ "$CurrentFolder" != '/usr'
 
 elif [[ $ModName_qqX ]]; then 
 
-  [[ -e "/$HOME/.qqX/qqX_settings" ]] && Q_Mod_SettingsFile="/$HOME/.qqX/qqX_settings"
+  [[ -e "$HOME/.qqX/qqX_settings" ]] && Q_Mod_SettingsFile="$HOME/.qqX/qqX_settings"
 
-elif [[ -e "/$HOME/.qmod_settings" ]] && [[ ! $ModName_qqX ]] ; then  
+elif [[ -e "$HOME/.qmod_settings" ]] && [[ ! $ModName_qqX ]] ; then  
 
-  Q_Mod_SettingsFile="/$HOME/.qmod_settings"
+  Q_Mod_SettingsFile="$HOME/.qmod_settings"
 
-elif [[ -e "/$HOME/qmod_settings" ]] && [[ ! $ModName_qqX ]] ; then 
+elif [[ -e "$HOME/qmod_settings" ]] && [[ ! $ModName_qqX ]] ; then 
 
-  Q_Mod_SettingsFile="/$HOME/qmod_settings"
+  Q_Mod_SettingsFile="$HOME/qmod_settings"
 
 else  
 
   Q_Mod_SettingsFile=  
 
-  echo; echo "  No settings file found .... " ; echo
+  echo; echo "  No settings file found .... " ; echo ; sleep 2
   
 fi
 
@@ -200,6 +220,8 @@ fi
 # Declare global associative VM ARRAY & other initializing global vars
 
 declare -gA VM_Array=()
+
+declare -ga Extra_VM_Folder=()
 
 
 # Load Settings & Array Presets  (flag QWRAP)
@@ -212,27 +234,34 @@ if [[ -e "$Q_Mod_SettingsFile" ]]; then
 
   # shellcheck disable=SC1090
     
-  source "$Q_Mod_SettingsFile"  QWRAP
+  if [[ $ModName_qqX ]]; then source "$Q_Mod_SettingsFile" ; else source "$Q_Mod_SettingsFile"  QWRAP ; fi
 
 else
 
-  printf "\n\n  ERROR  'qmod_settings' file not found \n\n  Re-check Installation &/or Installation instructions \n\n" ; sleep 10
+  printf "\n\n  ERROR with settings file detection \n\n  Re-check Installation &/or Installation instructions \n\n" ; sleep 10 
   
 fi
 
 
-# Make sure that 'Default_VM_Folder' has a value and it exists
 
-[[ ! $Default_VM_Folder ]] && Default_VM_Folder="$CurrentFolder"
+# Function to create a list of preset VM locations 
 
+function_create_VM_folderList() {
 
-# And create the list of preset VM locations 
+  DefaultFolderError=
+  ExtraFolderError=
 
-function_create_vm_folder_list() {
+  # Make sure that 'Default_VM_Folder' has a value and it exists
+
+  [[ ! $Default_VM_Folder ]] && Default_VM_Folder="$CurrentFolder"
 
   if [[ ! -d "$Default_VM_Folder" ]]; then printf "\n\n  Settings ERROR:  Default Folder NOT found \n\n" ; sleep 2 ; DefaultFolderError=1 ; fi
 
-  VM_Folder_List=( "$CurrentFolder" "$Default_VM_Folder" )
+  
+  # set and clear the folder array
+ 
+  declare -ga VM_Folder_List=( "$CurrentFolder" "$Default_VM_Folder" )
+
 
   # shellcheck disable=SC2154
 
@@ -240,13 +269,70 @@ function_create_vm_folder_list() {
 
     [[ $xF ]] && VM_Folder_List+=("$xF")
 
-    [[ $xF ]] &&  if [[ ! -d "$xF" ]]; then printf "\n\n  Settings ERROR:  Extra Folder NOT found \n\n" ; sleep 2 ; ExtraFolderError=1 ; fi
+    if [[ $xF ]] &&  [[ ! -d "$xF" ]] ; then 
+
+      # if .conf targeted start, then no need to print this, 
+      # unless re-selecting, in which case the error flag will create a later highlight.
+    
+      if [[ ! $Conf_TriggerFolder ]]; then 
+      
+        printf "\n\n  Settings ERROR:\n\n  Extra Folder %s NOT found \n\n"  "$xF" 
+        sleep 2 
+
+      fi
+
+      ExtraFolderError=1
+
+    fi
 
   done
 
 }
 
-function_create_vm_folder_list
+
+# Now populate the list: 
+
+function_create_VM_folderList
+
+
+# But, if settings need reloading, following a settings edit or a VM deletion:
+
+function_refresh_and_reload_VM_arrays() {
+
+  # NB clear extra folders array
+
+  declare -ga Extra_VM_Folder=()
+
+
+  # NB clear pre-set folders array 
+
+  declare -gA VM_Array=()
+
+
+  # Re-Read settings file & pre-set folders:
+
+  # shellcheck disable=SC1090
+
+  if [[ $ModName_qqX ]]; then source "$Q_Mod_SettingsFile" ; else source "$Q_Mod_SettingsFile"  QWRAP ; fi
+
+  function_create_VM_folderList  
+
+  function_scan_VM_folderList  
+
+  # reload screen ( REVIEW  all cases ? )
+
+  SettingsFileAdjusted=1
+
+  ByPass_VM_Array_Selector=1
+
+  KVM_MSR_Error=
+
+  printf "\033c"
+
+  show_qmod_title
+
+}
+
 
 # Record any set ExtraArgs in case of need to reset
 
@@ -488,8 +574,6 @@ print_kvm_status () {
 
       fi
 
-      #printf "\n"
-
     fi
     
   else 
@@ -501,8 +585,6 @@ print_kvm_status () {
     else printf "  WARNING \n" 
 
     fi
-
-    #printf "\n"
 
   fi
 
@@ -612,9 +694,21 @@ select_msr_config () {
   # MSR_offer normally present if MSRS/OS conflict previously detected, 
   # however, presume selector is being used to change current status  REVIEW 
 
+  # where KVM_MSR_status="$(cat /sys/module/kvm/parameters/ignore_msrs)"
+
   function_find_kvm_msr_default_and_status
 
-  if [[ $KVM_MSR_status == "Y" ]]; then MSR_offer="N" ; else MSR_offer="Y" ; fi
+  if [[ $KVM_MSR_status == "Y" ]]; then 
+
+    if [[ "$VM_InstanceName" == *windows*  ]] ||	[[ "$VM_InstanceName" == *macos*  ]]; then  MSR_offer="N" 
+
+    else  MSR_offer="neutral" ; fi
+    
+  else 
+  
+    MSR_offer="Y" 
+    
+  fi
 
   KVM_MSR_selector=
 
@@ -630,6 +724,14 @@ select_msr_config () {
       printColor "\n\n  [y] to set Y "
 
       printf "  [enter]  leave as N"
+
+    elif [[ $MSR_offer == "neutral" ]]; then
+
+      printf "\n\n  Set N : echo 0 | sudo tee /sys/module/kvm/parameters/ignore_msrs ? "
+
+      printf "\n\n  [n] to set N "
+
+      printColor "  [enter]  leave as Y"
 
     else
 
@@ -1349,7 +1451,7 @@ function_quick_get_wrap ()  {
 
       h)  
           printf "\n\n  Once the download and initial setup up has finished, the new folder and .conf file may be easily moved"
-          printf "\n\n  and/or edited before running."
+          printf "\n\n  and/or edited before running. Part downloads can usually be re-started, if stopped."
 
       ;;
 
@@ -1373,12 +1475,15 @@ function_quick_get_wrap ()  {
     cd "$QWG_DownLoadFolder"  ||  function_conf_error  "FOLDER not accessible: $QWG_DownLoadFolder"
 
     
-    printf "\n  Once a download and initial setup up has finished, the new folder and .conf file may be easily moved\n\n"
-    printf "  and/or edited before running.  %s \n\n" "$QGW_DownloadSelection"
+    printf "\n  Once a download and initial setup up has finished, the new folder and .conf file may be easily moved"
+    printf "\n\n  and/or edited before running. Part downloads can usually be re-started, if stopped."
+    
+    printf "  %s \n\n" "$QGW_DownloadSelection"
 
     printColor "\n\n  [enter] to finish ALL current downloads "
 
-    printf "\n\n  Quickemu & downloader output: \n\n"
+    printf "\n\n  Quickemu & downloader output: "
+
 
     ## Although quickget will run as a background process, quickget will then go on to run aria2 etc 
 
@@ -1387,21 +1492,19 @@ function_quick_get_wrap ()  {
     #  and as this will compete with read & keyboard input we are limited to using [enter] ....
 
 
-    # quickget runs first, then it starts a downloader & quits
+    # quickget runs first, then it starts a downloader 
 
 
     quickget "$QGW_DownloadSelection" &  
 
-    printf "\n\n\n\n"
+    printf "\n\n\n\n\n"
 
     #  move the cursor   "\e[1A\r"  "\e[2K\r"  etc    See https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
 
     printf "\e[3A\r"
 
     sleep 2
-       
-    #while [[ "$(jobs -l)" == 'quickget'* ]] || [[ $(pgrep aria2) || $(pgrep curl) || $(pgrep wget) ]]; do 
-    
+   
     while true ; do
 
       read -r 
@@ -1415,17 +1518,26 @@ function_quick_get_wrap ()  {
 
         QGW_DownloadStopped=1
 
-        sleep 1 ; break
+        sleep 2 ; break
+
+      elif [[ "$(jobs -l)" == 'quickget'* ]]; then
+      
+        sleep 1; break
+
+      else 
+      
+        break
 
       fi
-
-      [[ "$(jobs -l)" == 'quickget'* ]] && break
 
     done
 
   fi
 
+  # variable sleep/pauses needed to give different processes time to output their summaries & finish up
+
   sleep 1
+
 
   New_VM_Folder=
  
@@ -1465,9 +1577,17 @@ function_quick_get_wrap ()  {
 
     if [[ ! $New_VM_File ]]; then
 
-      if [[ $QGW_DownloadStopped ]]; then printf "\n\n  Download Stopped > Residual files may need tidying"
+      if [[ $QGW_DownloadStopped ]]; then 
+      
+        printf "\n\n  Download Stopped > Residual files are present"
 
-      else  printf "\n\n  As there is no .conf file, there may have been an ERROR >" ; fi
+        printf "\n\n  Part downloads can usually be re-started if the folder is retained."
+
+      else  
+      
+        printf "\n\n  As there is no .conf file, there may have been an ERROR >" 
+        
+      fi
 
       printColor "\n\n  Folder contents: \n\n"
 
@@ -1475,7 +1595,7 @@ function_quick_get_wrap ()  {
 
       printColor "\n  [d] delete the folder" 
 
-      printf "  [enter] to ignore & continue "
+      printf "  [enter] to retain & continue "
 
       printf "\n\n"
 
@@ -1500,15 +1620,21 @@ function_quick_get_wrap ()  {
 
   if [[ $New_VM_File ]]; then
 
-    printColor "\n\n  Config file created: \n\n"
+    printColor "\n\n  Config file created"
+
+    printColor "  CHECK ME, NOW: \n\n"
 
     cat "$New_VM_File"
 
     printColor "\n\n  So far, so good  >  "
 
-    printf "\n\n  The start line may be edited to point to quickemu-wrap" 
+    printf "\n\n  The start line may be edited to point to %s"  "$ModName"
 
-    printf "\n\n  Suggest disk_size=\"32G\" or higher if expecting to create snapshots" 
+    printf "\n\n  Suggest disk_size=\"32G\" or higher if expecting to create snapshots. Note that" 
+
+    printf "\n\n  qcow2 disks auto-compress & will normally occupy much less of your hard drive "
+    
+    printf "\n\n  than that allocated. It is easier make them larger now than to resize later." 
 
     if [[ $QGW_OS_Arr_NameSelected =~ "windows" ]]; then
     
@@ -1519,22 +1645,27 @@ function_quick_get_wrap ()  {
 
     fi
 
-
-    printColor "\n\n\n  [enter] to return   [e] edit the config file "
+    printColor "\n\n\n  [enter] edit the config file   [c] continue (with current settings)  [d]  delete - something went wrong ..."
 
     printf "\n\n"
 
     read -rp "  >  "   QGW_ConfEdit
+
   
-    if [[ $QGW_ConfEdit ]]; then 
+    if [[ $QGW_ConfEdit == "c" ]]; then 
+
+      true
+    
+    elif [[ $QGW_ConfEdit == "d" ]]; then 
+    
+      function_delete_Selected_VM  "$New_VM_Folder" "$New_VM_File"
+
+    else 
     
       qmod_edit_settings  "new_conf"
 
-      cat "$New_VM_File"
-
-      echo
-
     fi
+
 
   elif [[ $QGW_FolderDelete == "d" ]]; then
 
@@ -1548,11 +1679,14 @@ function_quick_get_wrap ()  {
   fi
 
   
-
-
-  # return back to any working directory if one had already been set
+  # return back to any working directory if one had already been set  ( REVIEW is this right in all cases?)
 
   if [[ $VM_Conf_Dir ]]; then cd "$VM_Conf_Dir"  || function_conf_error  "Quickget-Wrap Working Directory NOT FOUND ," ; fi
+
+
+  function_refresh_and_reload_VM_arrays
+
+  ByPass_VM_Array_Selector=1
 
 }
 
@@ -1567,12 +1701,16 @@ function_conf_error () {
 
   ErrorMenuSelect=
 
+  NewSetupFlag=
+
   printf "\n\n  Quickemu-Wrap Settings, VM folder & conf file(s)"
 
+  if [[ $1 ]] ; then printf "\n\n  Check %s settings, location & content ... "  "$1"
 
-  if [[ $1 ]] ; then printf "\n\n  Check %s settings, location & content ... \n\n"  "$1"
+  else printf "\n\n  Check the settings and re-run this script ... " ; fi
 
-  else printf "\n\n  Check the settings and re-run this script ... \n\n" ; fi
+
+  printf "\n\n  Settings file:  %s \n\n" "$Q_Mod_SettingsFile"
 
   
   if [[ "$1" == *'COMMAND'* ]]; then 
@@ -1583,14 +1721,17 @@ function_conf_error () {
 
   elif [[ $1 == "folder" ]] && [[ $(ls "$VM_InstanceName"/*.iso 2> /dev/null) ]]; then 
 
-    echo
+    printColor "\n  CHECK ME, NOW: \n\n"
+
     cat "$VM_Conf_File"
+
+    NewSetupFlag=1
      
-    printColor "\n\n  NEW SETUP:  [e] edit the .conf file  [c] continue with current settings  "
+    printColor "\n\n  NEW SETUP:  [enter]  edit the .conf file   [c] continue  (with current settings) "
 
     [[ "$VM_InstanceName" =~ 'windows' ]] && printf "\n\n  128G disk size edit recommended, plus make sure tpm and secure boot are on"
 
-    printf "\\n\n  [Enter] to edit %s general settings   [q] to quit \n\n"   "$ModName"
+    printf "\\n\n  [e] to edit %s general settings   [q] to quit \n\n"   "$ModName"
     
   else   
   
@@ -1613,29 +1754,41 @@ function_conf_error () {
 
     if [[ $ErrorMenuSelect == "e" ]]; then 
 
-      printf "\n\n  To auto-run  quickemu-wrap / qwrap :"
-
-      printf "\n\n  #!/usr/bin/quickemu --vm   becomes   #!/usr/bin/quickemu-wrap --vm   #!/usr/bin/qwrap --vm   or similar "
-
-      printColor "\n\n  [enter] to continue \n\n"
-
-      read -rp "  >  "
-    
-      qmod_edit_settings  "conf"
+      if [[ $NewSetupFlag ]]; then qmod_edit_settings ; else qmod_edit_settings  "conf" ; fi
 
     elif [[ $ErrorMenuSelect == "gt" ]]; then 
 
       VM_Selection=
       function_quick_get_wrap 
-      function_create_vm_folder_list
-      ByPass_VM_Array_Loader=
-      printf "\033c"
-      show_qmod_title
       return
 
     fi
   
-  else  qmod_edit_settings  ; fi
+  else  
+  
+    if [[ $NewSetupFlag ]]; then 
+
+      NewSetupFlag=
+
+      printf "\n\n  To auto-run  quickemu-wrap / qwrap :"
+
+      printf "\n\n  #!/usr/bin/quickemu --vm   becomes   #!/usr/bin/quickemu-wrap --vm   #!/usr/bin/qwrap --vm   or similar "
+
+      [[ $ModName_qqX ]] && printf "\n\n  Adjust to read as qqx (or qqX) instead od quickemu "
+
+      printColor "\n\n  [enter] to continue \n\n"
+
+      read -rp "  >  "
+    
+      qmod_edit_settings  "conf" 
+      
+    else 
+    
+      qmod_edit_settings
+    
+    fi
+    
+  fi
 
 }
 
@@ -1648,46 +1801,60 @@ function_VM_array_add_confs () {
 
   #  If initial settings file has populated / part-populated the array then ${VM_Array[0,0]} will be present
 
-  if [[ ! ${VM_Array[0,0]} ]]; then New_VM_Number=0  
+  if [[ $1 ]]; then
 
-  else New_VM_Number="$((${#VM_Array[@]} / 2))" ; fi
+    # make sure that a $1 has been sent & that the calling array splitter hasn't sent an empty value
 
-  local i=0
-
-  while [[ ${VM_Array[$i,0]} ]]; do
-
-    ArrFolderFile="${VM_Array[$i,0]}/${VM_Array[$i,1]}"
     TestFolderFile="$1/$2"
 
-    [[ ! -e $TestFolderFile ]] && function_conf_error  "VM_array_add_confs: File Not Found"
-
-    if [[ $ArrFolderFile == "$TestFolderFile" ]]; then 
+    [[ ! -e $TestFolderFile ]] && function_conf_error  "VM_array_add_confs: File Not Found" && return 
     
-      # already exists, stop searching, quit function:
-      return
 
-    else  
+    if [[ ! ${VM_Array[0,0]} ]]; then 
+    
+      New_VM_Number=0  
 
-      # carry on interating the array
-      ((i+=1))  
+    else 
+    
+      New_VM_Number="$((${#VM_Array[@]} / 2))" 
+
+      local i=0
+
+      while [[ ${VM_Array[$i,0]} ]]; do
+
+        ArrFolderFile="${VM_Array[$i,0]}/${VM_Array[$i,1]}"
+
+        if [[ $ArrFolderFile == "$TestFolderFile" ]]; then 
+        
+          # already exists, stop searching, quit function:
+          return
+
+        else  
+
+          # carry on interating the array
+          ((i+=1))  
+
+        fi
+        
+      done
 
     fi
-    
-  done
 
-  if grep -q 'guest_os=' "$TestFolderFile" 2> /dev/null ; then
+    if grep -q 'guest_os=' "$TestFolderFile" 2> /dev/null ; then
 
-    # if at the end there is no match found then add it, if it is valid
+      # if at the end there is no match found, then add it, if it is valid
 
-    VM_Array[$New_VM_Number,0]="$1" 
-    VM_Array[$New_VM_Number,1]="$2" 
+      VM_Array[$New_VM_Number,0]="$1" 
+      VM_Array[$New_VM_Number,1]="$2" 
 
- fi
+    fi
+
+  fi
   
 }
 
 
-function_Scan_VM_folders () {
+function_scan_VM_folderList () {
 
   ##  Scans of current & listed VM folders for other potential '.conf' files to the VM array
 
@@ -1707,7 +1874,11 @@ function_Scan_VM_folders () {
 
     if [[ ${Folder_Conf_Array[0]} ]]; then 
 
-      for TestFile in "${Folder_Conf_Array[@]}"; do function_VM_array_add_confs  "$FolderPathName" "$TestFile" ; done
+      for TestFile in "${Folder_Conf_Array[@]}"; do 
+           
+      [[ $TestFile ]] && function_VM_array_add_confs  "$FolderPathName" "$TestFile" 
+      
+      done
 
     fi
 
@@ -1725,7 +1896,7 @@ function_Scan_VM_folders () {
 
 
 
-function_list_conf_array () {
+function_print_conf_array () {
 
   # Print a list of the VM's in the VM array
 
@@ -1735,7 +1906,7 @@ function_list_conf_array () {
 
     if [[ ! -d "${VM_Array[$VM_List_Num,0]}" ]]; then 
 
-      printf "\n\n  ERROR  quickemu-mod folder not found: \n\n  %s \n\n" "${VM_Array[$VM_List_Num,0]}"
+      printf "\n\n  ERROR  %s folder not found: \n\n  %s \n\n" "$ModName" "${VM_Array[$VM_List_Num,0]}"   
 
       function_conf_error  "folder $VM_List_Num" 
       SelectArrayError=1
@@ -1764,7 +1935,7 @@ function_list_conf_array () {
 
       else
 
-        printf "\n\n  ERROR  quickemu-mod ' .conf ' not found: \n\n  %s \n\n" "${VM_Array[$VM_List_Num,0]}/${VM_Array[$VM_List_Num,1]}"
+        printf "\n\n  ERROR  %s ' .conf ' not found: \n\n  %s \n\n" "$ModName" "${VM_Array[$VM_List_Num,0]}/${VM_Array[$VM_List_Num,1]}"
 
         function_conf_error  "config $VM_List_Num" 
         SelectArrayError=1
@@ -1798,7 +1969,7 @@ function_Select_VM () {
 
     # Re-scan folders as something new may have been added
 
-    function_Scan_VM_folders
+    function_scan_VM_folderList
 
     function_VM_array_add_confs
 
@@ -1817,13 +1988,12 @@ function_Select_VM () {
     VM_Conf_Dir=
     VM_Conf_File=
 
-    # printf "\n"
+    function_print_conf_array
 
-    function_list_conf_array
     
     if [[ $DefaultFolderError || $ExtraFolderError ]]; then 
 
-    printf "\n"
+    printf "\n\n\n  Settings file: %s" "$Q_Mod_SettingsFile"
 
     [[ $DefaultFolderError ]] && printf "\n\n  ERROR: DEFAULT FOLDER   [enter] to edit settings file  [q] to quit " 
 
@@ -1849,13 +2019,9 @@ function_Select_VM () {
           
       DefaultFolderError= 
       ExtraFolderError=
-      VM_Selection= 
+      VM_Selection=
       VM_InstanceName=
       qmod_edit_settings 
-      ByPass_VM_Array_Selector=
-      SelectArrayError=1
-      printf "\033c"
-      show_qmod_title
       return
 
     fi
@@ -1889,7 +2055,9 @@ function_Select_VM () {
 
     # Only the array checker is run after a settings edit, if a VM selection is already in place 
 
-    printf "\n\n  Maintaining current KVM settings ... "
+    # printf "\n\n  Maintaining current KVM settings ... "
+
+    true
 
   else
 
@@ -2122,27 +2290,8 @@ qmod_edit_settings() {
 
       "$TextEditor" "$Q_Mod_SettingsFile"  2> /dev/null 
 
-      SettingsFileAdjusted=1
-
-      # Re-Read settings file & QWRAP sections:
-
-      # shellcheck disable=SC1090
-
-      if [[ $ModName_qqX ]];then . "$Q_Mod_SettingsFile"  else . "$Q_Mod_SettingsFile"  QWRAP ; fi
-
-      # re-read the preset folders
-
-      function_create_vm_folder_list
-
-      printf "\033c"
-
-
-      # Flag up for main loop to run/re-run the VM array checker/selector
-
-      Select_VM=1
-
-      [[ $VM_InstanceName ]] &&  ByPass_VM_Array_Selector=1
-
+      function_refresh_and_reload_VM_arrays
+     
     fi
 
   else
@@ -2151,13 +2300,99 @@ qmod_edit_settings() {
 
     printf "\n\n  Try an install of 'nano' or give settings file the command name of a preferred editor ..  "
 
-    printCf "\n\n  Settings location:  %s  \n\n"  "$Q_Mod_SettingsFile"
+    printf "\n\n  Settings location:  %s  \n\n"  "$Q_Mod_SettingsFile"
 
     read -rp "  [enter] to return >  "
 
   fi
 
 }
+
+
+function_delete_Selected_VM () {
+
+  if [[ ! $1 && $2 ]]; then
+
+    # Normally: VM_InstanceName="${VM_Conf_File/.conf}"
+
+    printColor "\n\n  Params VM Name & VM config file (NO PATH) must be given \n\n " 
+
+    sleep 2 ;  return
+
+  else
+
+    if [[ ! -d "$1" ]] || [[ ! -e "$2" ]]; then
+
+      printColor "\n\n  Params VM Name & VM config file (NO PATH) must be given \n\n " 
+
+      printColor "\n\n  Params VM Name / VM config file  NOT FOUND  \n\n " 
+
+      sleep 2 ;  return
+
+    fi
+
+    if [[ $(type -p gio 2>/dev/null) ]]; then TrashingAvailable=1 ; else TrashingAvailable= ; fi
+
+    printColor "\n\n  Folder: %s " "$1"
+  
+    printColor " & %s to be deleted?"  "$2"
+
+    printf "\n\n Folder content: \n\n "
+
+    ls "$1"
+
+    if [[ $TrashingAvailable ]]; then 
+
+      printf "\n\n  [enter] safely move things to the trash bin  \n\n  [n] keep   [y] yes, PERMANENTLY, I have back-ups ..."
+
+    else
+
+      printf "\n\n  [enter] use the file manager to move things the trash bin \n\n  [y] yes, PERMANENTLY, I have back-ups ..."
+
+    fi
+
+    printf "\n\n"
+
+    read -rp "  >  "   Delete_VM_Option
+
+    if [[ $Delete_VM_Option == "y" ]]; then 
+
+      printf "\n\n  Folder & .conf file being deleted ... \n\n"
+      
+      rm -f -r "$1"  
+      echo
+
+      rm -f "$2"
+      echo
+
+    else
+
+      # https://specifications.freedesktop.org/trash-spec/trashspec-latest.html
+
+      if [[ $TrashingAvailable ]] && [[ $Delete_VM_Option != "n" ]]; then
+
+        gio trash "$1"
+        gio trash "$2"
+
+      else
+
+        printf "\n\n  NOT deleted ... \n\n"
+
+      fi
+
+    fi
+
+    sleep 1.4
+
+    printColor "\n\n  [enter] to return or continue \n\n" 
+    read -rp "  > "
+
+    function_refresh_and_reload_VM_arrays
+
+  fi
+
+}
+
 
 
 function show_quickemu_WRAP_help {
@@ -2172,7 +2407,7 @@ function show_quickemu_WRAP_help {
 
   else 
   
-    printColor "\n\n  Quickemu Mod - Virtual Machine Launcher  Wrap Version %s"  "$ModVersion" 
+    printColor "\n\n  Quickemu Mod - Virtual Machine Launcher - Wrap Version %s %s " "$ModName" "$ModVersion" 
 
   fi
 
@@ -2212,7 +2447,7 @@ function show_quickemu_WRAP_help {
 
 show_qmod_title() {
 
-  if [[ $ModName_qqX ]]; then echo; function_qqX_logo_title  "$qqX_title"
+  if [[ $ModName_qqX ]]; then echo ; function_qqX_logo_title  "$qqX_title"
 
   else printColor "\n\n  Quickemu Mod - Virtual Machine Launcher  Wrap Version %s"  "$ModVersion" ; fi
 
@@ -2220,7 +2455,9 @@ show_qmod_title() {
 
   [[ $VerboseArgs ]] && printf  "  (Verbose Args)"
   
-  printf "\n"   
+  #printf "\n"   
+
+  printf "\n\n  Current Folder: %s \n"  "$(pwd)"
 
 }
 
@@ -2271,7 +2508,26 @@ if [[ $1 ]]; then
 
   # simple API for eg .desktop or .conf starts  ie.  --vm  "path/folder/file.conf"   
 
-  if [[ "$1" != ?'-vm' ]]; then  
+  if [[ $1 == "XDG" ]]; then 
+
+    # .desktop start  (belt & braces)
+
+    cd "$HOME"  || printf "\n\n XDG .desktop > HOME Folder not found " 
+
+    if [[ $(pwd) != "$HOME" ]]; then
+
+      printf "\n\n XDG .desktop > HOME Folder not found "
+      sleep 3
+      exit 1
+
+    else
+
+      CurrentFolder="$(pwd)"
+      shift
+
+    fi
+
+  elif [[ "$1" != ?'-vm' ]]; then  
   
     show_mod_api_usage ; exit
 
@@ -2284,6 +2540,7 @@ if [[ $1 ]]; then
     shift $#
     
   fi
+
 
   if [[ ! $VM_Conf_Dir ]]; then 
   
@@ -2418,15 +2675,17 @@ while true ; do
 
   if [[ ! $MainMenuChoice ]]; then
 
-    [[ $KVM_MSR_Error ]] && printf  "\n\n  [m] toggle msrs "
+    printf  "\n\n"
 
-    printf  "\n\n  [vm]  reselect "
+    [[ $KVM_MSR_Error ]] && printf  "  [m]  toggle msrs"
+
+    printf  "   [vm]  reselect "
 
     
     if [[ $ShowUtilsMenu ]]; then
 
 
-      print_kvm_status
+      #print_kvm_status
 
       printf "\n"
 
@@ -2440,7 +2699,9 @@ while true ; do
 
       printf  "\n\n  [xa]  add extra qemu args  [m] toggle msrs "
 
-      printf  "\n\n  [u]   hide utils & technical   [hdw]  Add current config to this VM's Virtual Hardware Record"
+      printColor  "\n\n  [u]   hide utils & technical"
+      
+      printf "   [hdw]  Add current config to this VM's Virtual Hardware Record"
     
       [[ $ExtraArgs ]] && printf  "\n\n  Extra Args:  %s"  "$ExtraArgs"
 
@@ -2465,7 +2726,7 @@ while true ; do
 
     printf "\n"
 
-    printf  "\n\n  [gt]  quickget a new distro"
+    printf  "\n\n  [gt]  quickget a new distro   [del] delete selected VM"
 
     printf  "\n\n  [h]   show help & info   [set] open settings file in text editor "
 
@@ -2484,6 +2745,10 @@ while true ; do
   if [[ $MainMenuChoice == "h" ]] ; then
 
     show_quickemu_WRAP_help
+
+   elif [[ $MainMenuChoice == "del" ]]; then 
+
+    function_delete_Selected_VM  "$VM_InstanceName"  "$VM_Conf_File"
 
   elif [[ $MainMenuChoice == "hdw" ]] ; then
 
@@ -2701,9 +2966,8 @@ while true ; do
 
     if [[ ! ${VM_Array[0,0]} ]]; then
 
-      # Re-Read settings file & QWRAP sections:   
-      # shellcheck disable=SC1090
-      if [[ $ModName_qqX ]];then . "$Q_Mod_SettingsFile"  else . "$Q_Mod_SettingsFile"  QWRAP ; fi
+      function_refresh_and_reload_VM_arrays
+
     fi
 
     Select_VM=1

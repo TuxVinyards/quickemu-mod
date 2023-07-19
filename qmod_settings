@@ -105,7 +105,11 @@ KVM_MSR_ModProbeFile="/etc/modprobe.d/kvm-quickemu.conf"
 # Edit here if your OS locates 'modprobe.d' differently.  QMOD default is "/etc/modprobe.d/kvm-quickemu.conf"
 
 
-   
+
+Verbose_MSR_dialog=
+
+#  Set =1 for more prompting.  Standard prompting will be less active in warning situations.
+  
 
 if [[ $1 == "QWRAP" ]] ; then
 

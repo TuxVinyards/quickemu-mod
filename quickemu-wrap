@@ -37,9 +37,11 @@
 
 #  @2023/07/12 this script also forms the base for qqX - quickemu quickget X terminal project  
 
-#  It may be found named as quickemu-wrap or also found as qqx or qqX
+#  It may be found named as quickemu-wrap or also found as qqx or qqX   
 
-#  See:  https://github.com/TuxVinyards/qqX
+#  NB  if interchanging qwrap & qqX you will need different settings files.
+
+#  See:  https://github.com/TuxVinyards/qqX  &  https://github.com/TuxVinyards/quickemu-mod
 
 
 #  qwrap / qqX may be installed alongside quickemu in /usr/bin  & run by typing 'qwrap' / 'qqx' or 'quickemu-wrap' 
@@ -50,7 +52,7 @@
 
 #  @ 05/2023  qwrap may also be started by clicking on the .conf file if the standard first .conf line is edited to point to qwrap.
 
-#  This second mod re-writes the original quickemu-mod as a type of full wrapper script.
+#  This second mod now re-writes the original quickemu-mod as a type of full wrapper script.
 
 #  It uses sections of quickemu for direct source & so should generally auto-update to code changes.
 
@@ -120,7 +122,7 @@ if [[ ! $QEMU ]] || [[ ! $QEMU_IMG ]]; then
 fi
 
 
-ModVersion="2023.07.18"
+ModVersion="2023.07.19"
 
 ModName="$(basename "$0")"
 
@@ -595,6 +597,8 @@ toggle_msr_defaults () {
 
   # Modded & now reversible rewrite of original quickemu's function 'ignore_msrs_always'
 
+  Verbose_MSR_dialog=1
+
   # https://www.linux-kvm.org/page/Category:Docs
 
   if [[ ! -d /etc/modprobe.d ]]; then
@@ -654,7 +658,19 @@ toggle_msr_defaults () {
 
 show_kvm_sudo_security_note () {
 
-  printColor     "\n  %s requires 'sudo' permissions to echo true or false to 'ignore_msrs'" "$ModName"
+  printColor "\n  If you mainly use Windows or Mac VM's then a file '.../modprobe.d/kvm-quickemu.conf' "
+  
+  printf   "\n\n  can be created to modify the load up settings. %s has a new built in function"  "$ModName"
+
+  printf   "\n\n  that can set this up & also allows future adjustments may be made."
+  
+  printf   "\n\n  Or it may be carried out manually...  See settings, script & further notes for details."
+ 
+  printColor "\n\n\n  Status:  /sys/module/kvm/parameters/ignore_msrs = %s   Current Default = %s"   "$KVM_MSR_status"  "$KVM_MSR_default"
+ 
+  printf "\n\n  Windows or MacOS should be set to 'Y' "
+
+  printColor "\n\n\n  %s requires 'sudo' permissions to echo true or false to 'ignore_msrs'" "$ModName"
   
   printf   "\n\n  This allows you to create a temporary MSRS status that may be changed at any time,"
   
@@ -670,19 +686,6 @@ show_kvm_sudo_security_note () {
   printf   "\n\n  Elevated permissions will then exist only in the side terminal & cease once it is closed. "
 
   printf   "\n\n  Return to %s & select 'leave as'.  %s will re-read msrs settings & auto-update. "   "$ModName" "$ModName"
-
-
-  printColor "\n\n\n  If you mainly use Windows or Mac VM's then a file '.../modprobe.d/kvm-quickemu.conf' "
-  
-  printf   "\n\n  can be created to modify the load up settings. Quickemu-Mod has a new built in function"
-
-  printf   "\n\n  that can set this up & also allows future adjustments may be made."
-  
-  printf   "\n\n  Or it may be carried out manually...  See settings, script & further notes for details."
- 
-  printColor "\n\n\n  Status:  /sys/module/kvm/parameters/ignore_msrs = %s   Current Default = %s"   "$KVM_MSR_status"  "$KVM_MSR_default"
- 
-  printf "\n\n  Windows or MacOS should be set to 'Y' "
 
   printf   "\n"
   
@@ -819,8 +822,6 @@ msrs_conflict_check_resolver() {
       
       printf " 'ignore_msrs' is set & is recommended for Windows and Mac"  
 
-      #printf "\n\n  Status:  /sys/module/kvm/parameters/ignore_msrs = N   Default = %s"  "$KVM_MSR_default"
-
       MSR_offer="Y"
 
       select_msr_config
@@ -842,8 +843,6 @@ msrs_conflict_check_resolver() {
       printColor "\n\n  Selected: %s "  "$VM_InstanceName"
     
       printf "\n\n 'ignore_msrs' is set:  can be okay for other OS's but is normally used only with Windows and Mac"  
-
-      #printf "\n\n  Status:  /sys/module/kvm/parameters/ignore_msrs = Y   Default = %s"  "$KVM_MSR_default"
 
       MSR_offer="N"
 
@@ -2100,7 +2099,11 @@ function_Select_VM () {
 
     function_find_kvm_msr_default_and_status
 
-    msrs_conflict_check_resolver
+    if [[ $Verbose_MSR_dialog ]] || [[ ! $Verbose_MSR_dialog ]] && [[ "$VM_InstanceName" == *windows* || "$VM_InstanceName" == *macos* ]]; then 
+    
+      msrs_conflict_check_resolver
+
+    fi
 
   fi
 
@@ -2677,9 +2680,9 @@ while true ; do
 
     printf  "\n\n"
 
-    [[ $KVM_MSR_Error ]] && printf  "  [m]  toggle msrs"
+    [[ $KVM_MSR_Error ]] && printf  "  [m]  msrs help "
 
-    printf  "   [vm]  reselect "
+    printf  "  [vm]  reselect "
 
     
     if [[ $ShowUtilsMenu ]]; then
@@ -2697,7 +2700,7 @@ while true ; do
       
       fi
 
-      printf  "\n\n  [xa]  add extra qemu args  [m] toggle msrs "
+      printf  "\n\n  [xa]  add extra qemu args   [m] msrs help "
 
       printColor  "\n\n  [u]   hide utils & technical"
       

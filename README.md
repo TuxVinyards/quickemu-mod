@@ -107,6 +107,10 @@ No densely packed lines of unexplained regex style hieroglyphics, please.
 
 \@2023.07.18
 
+- Make MSRS dialog less verbose by standard & add settings switch
+
+\@2023.07.18
+
 - Add a delete to trash function.  Fix some consequent array re-scan bugs.
 
 \@2023.07.15  

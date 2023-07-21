@@ -122,7 +122,7 @@ if [[ ! $QEMU ]] || [[ ! $QEMU_IMG ]]; then
 fi
 
 
-ModVersion="2023.07.19"
+ModVersion="2023.07.21"
 
 ModName="$(basename "$0")"
 
@@ -923,13 +923,13 @@ QE_rw_Vars_StartPoint=$(grep -n -m 1 -e 'readonly' "/tmp/qmod-qe-all-vars-temp" 
 
 head -"$QE_rw_Vars_StartPoint" "/tmp/qmod-qe-all-vars-temp"  > "/tmp/qmod-qe-rw-vars-temp"
 
-function_clear_quickemu_vars () {
+function clear_quickemu_vars {
 
   source "/tmp/qmod-qe-rw-vars-temp"
 
 }
 
-function_clear_quickemu_vars
+clear_quickemu_vars
 
 
 
@@ -956,52 +956,60 @@ declare -f vm_boot  | head -n -"$QE_vm_bootCutOff"  >  "/tmp/qmod-function-vm_bo
 
 cat << \EOF >> "/tmp/qmod-function-vm_boot-temp"
 
-  #  REVIEW can patching in $WinHyperV_RC  & creating a RC reader function be done here ??
+    #  REVIEW can patching in $WinHyperV_RC  & creating a RC reader function be done here ??
 
-  # Show all the compiled qemu & swmtp arguments as a human readable list 
-  # both to a log file and to screen   (Args & Args/HW record are defined after the VM selection or re-selection)
+    # Show all the compiled qemu & swmtp arguments as a human readable list 
+    # both to a log file and to screen   (Args & Args/HW record are defined after the VM selection or re-selection)
 
-  printf   "\n  Present Working Directory:  %s"  "$(pwd)" > "$QemuArgsFile"
-  printf "\n\n  Qemu:      %s  %s" "$QEMU" "$QEMU_VER_LONG" >> "$QemuArgsFile"
-  printf "\n\n  QuickEmu:  %s" "$VERSION"  >> "$QemuArgsFile"
-  printf "\n\n  Q wrap:    %s" "$ModVersion" >> "$QemuArgsFile"
-  printf "\n\n  Date:      %s \n" "$(date)" >> "$QemuArgsFile"
+    printf   "\n  Present Working Directory:  %s"  "$(pwd)" > "$QemuArgsFile"
+    printf "\n\n  Qemu:      %s  %s" "$QEMU" "$QEMU_VER_LONG" >> "$QemuArgsFile"
+    printf "\n\n  QuickEmu:  %s" "$VERSION"  >> "$QemuArgsFile"
+    printf "\n\n  Q wrap:    %s" "$ModVersion" >> "$QemuArgsFile"
+    printf "\n\n  Date:      %s \n" "$(date)" >> "$QemuArgsFile"
 
-  for a in "${args[@]}"; do
-    if [[ "$a" == -dev* ]]; then printf "\n\n  %s" "$a" >> "$QemuArgsFile"
-    elif [[ "$a" == -* ]]; then printf "\n  %s" "$a" >> "$QemuArgsFile" 
-    else printf " %s" "$a" >> "$QemuArgsFile"
+    for a in "${args[@]}"; do
+      if [[ "$a" == -dev* ]]; then printf "\n\n  %s" "$a" >> "$QemuArgsFile"
+      elif [[ "$a" == -* ]]; then printf "\n  %s" "$a" >> "$QemuArgsFile" 
+      else printf " %s" "$a" >> "$QemuArgsFile"
+      fi
+    done
+
+    [[ $ExtraArgs ]] && printf "\n\n  ExtraArgs: %s "  "$ExtraArgs"  >> "$QemuArgsFile"
+
+    if [[ $tpm == "on" ]]; then 
+      printf "\n\n\n  Secure Boot:  %s \n\n  %s " "$SWTPM" "${tpm_args[*]}" >> "$QemuArgsFile"
+    else    
+      printf "\n\n\n  Secure Boot:  Not Set" >> "$QemuArgsFile"
     fi
-  done
+      printf "\n\n\n"  >> "$QemuArgsFile"
 
-  [[ $ExtraArgs ]] && printf "\n\n  ExtraArgs: %s "  "$ExtraArgs"  >> "$QemuArgsFile"
+    if [[ $VerboseArgs ]]; then 
 
-  if [[ $tpm == "on" ]]; then 
-    printf "\n\n\n  Secure Boot:  %s \n\n  %s " "$SWTPM" "${tpm_args[*]}" >> "$QemuArgsFile"
-  else    
-    printf "\n\n\n  Secure Boot:  Not Set" >> "$QemuArgsFile"
-  fi
-    printf "\n\n\n"  >> "$QemuArgsFile"
+      # hold the launch till we have checked the config 
+      BreakAtVerboseArgs=
+      cat "$QemuArgsFile"
+      printColor "  [enter] to continue  [b] to go back \n\n"
+      read -rp " >  " BreakAtVerboseArgs
+      printf "\n\n"
+      [[ $BreakAtVerboseArgs == "b" ]]  && return
 
-  if [[ $VerboseArgs ]]; then 
+    fi
 
-    # hold the launch till we have checked the config 
-    BreakAtVerboseArgs=
-    cat "$QemuArgsFile"
-    printColor "  [enter] to continue  [b] to go back \n\n"
-    read -rp " >  " BreakAtVerboseArgs
-    printf "\n\n"
-    [[ $BreakAtVerboseArgs == "b" ]]  && return
+    ##  Make sure we have a record of the virtual hardware that Qemu creates. Especially useful for Windows builds.
 
-  fi
+    #   See  https://github.com/quickemu-project/quickemu/issues/572#issuecomment-1531348755
 
-  # call QEMU  (with any extras, if present)
+    [[ ! -e "$QemuArgsFile" ]] && printColor "\n\n  ERROR QemuArgsFile %s failed to create \n\n"  "$QemuArgsFile" && sleep 3 && exit 1
 
-  # -D  https://qemu.readthedocs.io/en/latest/system/invocation.html
- 
-  eval "$QEMU" "${args[*]}" " $ExtraArgs"  -D  "${VMDIR}/${VMNAME}.qemu.error.log" &
+    [[ ! -e "$QemuVirtHardwareRecord" ]]  &&  cp "$QemuArgsFile"  "$QemuVirtHardwareRecord"
 
-  # wait $! not needed. Control now moved to PID menu instead
+    ## call QEMU  (with any extras, if present)
+
+    # -D  https://qemu.readthedocs.io/en/latest/system/invocation.html
+  
+    eval "$QEMU" "${args[*]}" " $ExtraArgs"  -D  "${VMDIR}/${VMNAME}.qemu.error.log" &
+
+    # wait $! not needed. Control now moved to PID menu instead
 
   fi
   
@@ -1010,15 +1018,7 @@ cat << \EOF >> "/tmp/qmod-function-vm_boot-temp"
 EOF
 
 
-##  Make sure we have a record of the virtual hardware that Qemu creates. Especially useful for Windows builds.
-
-#   See  https://github.com/quickemu-project/quickemu/issues/572#issuecomment-1531348755
-
-[[ ! -e "$QemuVirtHardwareRecord" ]]  &&  cp "$QemuArgsFile"  "$QemuVirtHardwareRecord"
-
-
-
-## Now add the modded boot code
+## Now add the modded boot code as the new function 'vm_boot'
 
 source "/tmp/qmod-function-vm_boot-temp"
 
@@ -1064,7 +1064,7 @@ function quickemu {
 
   # plus quickemu_vars have to be cleared before every call to quickemu as the base code is normally set to be run once & exit
 
-  function_clear_quickemu_vars
+  clear_quickemu_vars
 
 
   ## Do a first check for amy qwrap internal commands 
@@ -1728,7 +1728,13 @@ function_conf_error () {
      
     printColor "\n\n  NEW SETUP:  [enter]  edit the .conf file   [c] continue  (with current settings) "
 
-    [[ "$VM_InstanceName" =~ 'windows' ]] && printf "\n\n  128G disk size edit recommended, plus make sure tpm and secure boot are on"
+    if [[ "$VM_InstanceName" =~ 'windows' ]]; then 
+    
+      printf "\n\n  128G disk size edit recommended, plus make sure tpm and secure boot are on"
+
+      printf "\n\n  Use: fixed_iso=\"windows-xx/virtio-win-0.1.225.iso\" for display drivers & guest additions "
+
+    fi
 
     printf "\\n\n  [e] to edit %s general settings   [q] to quit \n\n"   "$ModName"
     
@@ -2191,7 +2197,7 @@ function_KillPID_Menu() {
   if [[ $InstancePID ]]; then 
  
     sleep 40   # REVIEW  can message output be better monitored?
-    
+
     printColor "\n  Quickemu instance %s on PID:  %s"  "$VM_InstanceName"  "$InstancePID"
 
     printColor  "   [k] force close the Quickemu instance  \n\n"
@@ -2346,11 +2352,15 @@ function_delete_Selected_VM () {
 
     if [[ $TrashingAvailable ]]; then 
 
-      printf "\n\n  [enter] safely move things to the trash bin  \n\n  [n] keep   [y] yes, PERMANENTLY, I have back-ups ..."
+      printColor "\n\n  [enter] safely move things to the trash bin"  
+      
+      printf "\n\n  [n] keep   [y] yes, PERMANENTLY, I have back-ups ..."
 
     else
 
-      printf "\n\n  [enter] use the file manager to move things the trash bin \n\n  [y] yes, PERMANENTLY, I have back-ups ..."
+      printColor "\n\n  [enter] use the file manager to move things the trash bin "
+      
+      printf "\n\n  [y] yes, PERMANENTLY, I have back-ups ..."
 
     fi
 
@@ -2680,15 +2690,16 @@ while true ; do
 
     printf  "\n\n"
 
-    [[ $KVM_MSR_Error ]] && printf  "  [m]  msrs help "
+    [[ $KVM_MSR_Error ]] && [[ ! $ShowUtilsMenu ]] && printf  "  [m]  msrs help "
 
     printf  "  [vm]  reselect "
 
     
     if [[ $ShowUtilsMenu ]]; then
 
+      printf "   [del] delete selected VM"
 
-      #print_kvm_status
+      printColor  "    [u]   hide utils & technical"
 
       printf "\n"
 
@@ -2701,10 +2712,8 @@ while true ; do
       fi
 
       printf  "\n\n  [xa]  add extra qemu args   [m] msrs help "
-
-      printColor  "\n\n  [u]   hide utils & technical"
-      
-      printf "   [hdw]  Add current config to this VM's Virtual Hardware Record"
+    
+      printf "\n\n  [hdw]  Add current config to this VM's Virtual Hardware Record"
     
       [[ $ExtraArgs ]] && printf  "\n\n  Extra Args:  %s"  "$ExtraArgs"
 
@@ -2716,7 +2725,7 @@ while true ; do
 
     fi
 
-    printf  "\n\n  [sl]  list   [sc]  create   [sd]  delete   [sa]  apply    snapshots "
+    printf  "\n\n  [sl]  list   [sc]  create   [sd]  delete   [sa]  apply   >  snapshots "
 
     printf "\n"
 
@@ -2729,8 +2738,8 @@ while true ; do
 
     printf "\n"
 
-    printf  "\n\n  [gt]  quickget a new distro   [del] delete selected VM"
-
+    printf  "\n\n  [gt]  quickget a new distro"
+    
     printf  "\n\n  [h]   show help & info   [set] open settings file in text editor "
 
     printf  "\n\n  [q]   quit "

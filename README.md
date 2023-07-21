@@ -105,6 +105,10 @@ No densely packed lines of unexplained regex style hieroglyphics, please.
 
 ## Changes
 
+\@2023.07.21
+
+- Tweak Utils UI  &  add Virtual Hardware Record first install autorun
+
 \@2023.07.18
 
 - Make MSRS dialog less verbose by standard & add settings switch

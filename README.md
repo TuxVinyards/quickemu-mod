@@ -107,6 +107,10 @@ No densely packed lines of unexplained regex style hieroglyphics, please.
 
 \@2023.07.21
 
+- Add screen percent ui & setting dialog
+
+\@2023.07.21
+
 - Tweak Utils UI  &  add Virtual Hardware Record first install autorun
 
 \@2023.07.18

@@ -122,7 +122,7 @@ if [[ ! $QEMU ]] || [[ ! $QEMU_IMG ]]; then
 fi
 
 
-ModVersion="2023.07.21"
+ModVersion="2023.07.23"
 
 ModName="$(basename "$0")"
 
@@ -245,7 +245,6 @@ else
 fi
 
 
-
 # Function to create a list of preset VM locations 
 
 function_create_VM_folderList() {
@@ -321,9 +320,9 @@ function_refresh_and_reload_VM_arrays() {
 
   function_scan_VM_folderList  
 
-  # reload screen ( REVIEW  all cases ? )
+  check_screen_percentage
 
-  SettingsFileAdjusted=1
+  # reload screen ( REVIEW  all cases ? )
 
   ByPass_VM_Array_Selector=1
 
@@ -350,20 +349,18 @@ ExtraSetArgs="$ExtraArgs"
 [[ $QG_Version ]] && [[ ! $(type -p "$QG_Version") ]] &&  printf "\n\n  ERROR  quickget not found \n\n  Re-check Installation &/or Installation instructions \n\n"   && sleep 10         
 
 
-quickget() {
+
+function quickget {
 
   # finds the right version for the standard 'quickget' call 
+
+  # quickemu is later as more complex
 
   if [[ $QG_Version ]]; then  eval command "$QG_Version" " $*"
 
   else eval command quickget " $*" ; fi
   
 }
-
-
-# the version number, for display purposes
-
-QG_Wrapped_VerNumber="$(quickget "--version")"
 
 
 
@@ -961,6 +958,8 @@ cat << \EOF >> "/tmp/qmod-function-vm_boot-temp"
     # Show all the compiled qemu & swmtp arguments as a human readable list 
     # both to a log file and to screen   (Args & Args/HW record are defined after the VM selection or re-selection)
 
+    # Using $VERSION which is the internal quickemu variable
+
     printf   "\n  Present Working Directory:  %s"  "$(pwd)" > "$QemuArgsFile"
     printf "\n\n  Qemu:      %s  %s" "$QEMU" "$QEMU_VER_LONG" >> "$QemuArgsFile"
     printf "\n\n  QuickEmu:  %s" "$VERSION"  >> "$QemuArgsFile"
@@ -1114,41 +1113,52 @@ function quickemu {
 
   done
 
-
   ## Source in original or modded-original code
-  
-  while [[ $1 ]]; do
 
-    source "/tmp/qmod-case-temp"
+  if [[ -e "/tmp/qmod-case-temp" ]] && [[ -e "/tmp/qmod-actions-temp" ]] && [[ -e "/tmp/qmod-boot-temp" ]]; then
+    
+    while [[ $1 ]]; do
 
-  done  
+      source "/tmp/qmod-case-temp"  
 
-  # after read, remove any leftover params not cleared due to trapped exit re-route 
+    done  
 
-  # & if not yet given, decide on action   
+    # after read, remove any leftover params not cleared due to trapped exit re-route 
 
-  #  https://unix.stackexchange.com/questions/18981/how-to-unset-the-positional-parameters
+    # & if not yet given, decide on action   
 
-  shift  $#
+    #  https://unix.stackexchange.com/questions/18981/how-to-unset-the-positional-parameters
 
-  source "/tmp/qmod-actions-temp"
+    shift  $#
+
+    source "/tmp/qmod-actions-temp"  
 
 
-  if [[ $VM_ExecBoot ]]; then
+    if [[ $VM_ExecBoot ]]; then
 
-    # In the modded version, functions such as snapshots no longer exit. We need to make sure that 
-    # unless flagged to do so, quickemu doesn't carry on to run the vm boot
+      # In the modded version, functions such as snapshots no longer exit. We need to make sure that 
+      # unless flagged to do so, quickemu doesn't carry on to run the vm boot
 
-    source "/tmp/qmod-boot-temp"
+      source "/tmp/qmod-boot-temp" 
 
-    VM_ExecBoot=
+      VM_ExecBoot=
+
+    fi
+
+  else
+
+    printColor "\n\n ERROR %s restart needed \n\n"  "$ModName"
+
+    sleep 5
 
   fi
 
 }
 
 
-# Temps get removed with time or with reboot
+# Temps usually get removed with reboot 
+
+# BUT can get removed by time (eg 24hrs) so check they are there still ( REVIEW  if causes problems )
 
 # See https://serverfault.com/questions/377348/when-does-tmp-get-cleared#377349
 
@@ -1160,6 +1170,57 @@ function quickemu {
 
 
 QGW_Version="2023.05.31"
+
+
+# The quick EMU/GET version numbers, now that rerouting functions quickemu & quickget are in place & code has been sourced
+
+QG_Wrapped_VerNumber="$(quickget "--version")"
+
+# Quick EMU uses its internal var '$VERSION'
+
+QE_Wrapped_VerNumber="$VERSION"
+
+QE_WrappedVer_INT=${QE_Wrapped_VerNumber/./}
+
+
+#  From quickemu 4.8, the value " --screenpct xx"  may be used on SDL, where xx is a value from 25 to 100  & Linux VM's only.
+
+function check_screen_percentage {
+
+  if [[ $SDL_ScreenPercent ]]; then
+
+    SDL_ScrnPcnt_Error=
+
+    if (( 24 < SDL_ScreenPercent && SDL_ScreenPercent < 101 )); then
+
+      if [[ $QE_WrappedVer_INT -ge "48" ]]; then 
+      
+        SDL_ScrnPcnt_Cmd=" --screenpct  $SDL_ScreenPercent"
+
+      else
+
+        printf "\033c"
+        printColor "\n\n  ERROR  SDL_ScreenPercent needs quickemu 4.8+ \n\n "
+        sleep 3
+        SDL_ScrnPcnt_Error="Quickemu Version"
+
+      fi
+
+    else
+      
+      printf "\033c"
+      printColor "\n\n  ERROR  SDL_ScreenPercent = %s  Range is 25 to 100 \n\n "  "$SDL_ScreenPercent"
+      sleep 3
+      SDL_ScrnPcnt_Error="Out of Range"
+
+    fi
+
+  fi
+
+}  
+
+check_screen_percentage
+
 
 
 QGW_ArrList() {
@@ -1644,7 +1705,9 @@ function_quick_get_wrap ()  {
 
     fi
 
-    printColor "\n\n\n  [enter] edit the config file   [c] continue (with current settings)  [d]  delete - something went wrong ..."
+    printColor "\n\n\n  [enter] edit the config file"
+    
+    printf "   [c] continue (with current settings)  [d]  delete - something went wrong ..."
 
     printf "\n\n"
 
@@ -1725,16 +1788,29 @@ function_conf_error () {
     cat "$VM_Conf_File"
 
     NewSetupFlag=1
-     
-    printColor "\n\n  NEW SETUP:  [enter]  edit the .conf file   [c] continue  (with current settings) "
 
+    printColor "\n  NEW SETUP: " 
+     
     if [[ "$VM_InstanceName" =~ 'windows' ]]; then 
     
       printf "\n\n  128G disk size edit recommended, plus make sure tpm and secure boot are on"
 
       printf "\n\n  Use: fixed_iso=\"windows-xx/virtio-win-0.1.225.iso\" for display drivers & guest additions "
 
+    else
+
+      printf "\n\n  Suggest disk_size=\"32G\" or higher if expecting to create snapshots."
+
     fi
+
+
+    printf "\n\n  Note that qcow2 disks auto-compress & will normally occupy much less of your hard drive "
+    
+    printf "\n\n  than that allocated. It is easier make them larger now than to resize later." 
+
+    printColor "\n\n\n  [enter]  edit the .conf file"
+    
+    printf "   [c] continue  (with current settings) "
 
     printf "\\n\n  [e] to edit %s general settings   [q] to quit \n\n"   "$ModName"
     
@@ -2299,6 +2375,8 @@ qmod_edit_settings() {
 
       "$TextEditor" "$Q_Mod_SettingsFile"  2> /dev/null 
 
+      SettingsFileAdjusted=1
+
       function_refresh_and_reload_VM_arrays
      
     fi
@@ -2416,7 +2494,7 @@ function show_quickemu_WRAP_help {
   
     echo; function_qqX_logo_title  "$qqX_title"
 
-    printf "\n\n  %s is currently wrapping:  quickemu %s  &  quickget %s"  "$ModName" "$VERSION"  "$QG_Wrapped_VerNumber"
+    printf "\n\n  %s is currently wrapping:  quickemu %s  &  quickget %s"  "$ModName" "$QE_Wrapped_VerNumber"  "$QG_Wrapped_VerNumber"
 
   else 
   
@@ -2464,7 +2542,7 @@ show_qmod_title() {
 
   else printColor "\n\n  Quickemu Mod - Virtual Machine Launcher  Wrap Version %s"  "$ModVersion" ; fi
 
-  printf "\n\n  Currently wrapping:   quickemu %s  &  quickget %s"  "$VERSION"  "$QG_Wrapped_VerNumber"
+  printf "\n\n  Currently wrapping:   quickemu %s  &  quickget %s"  "$QE_Wrapped_VerNumber"  "$QG_Wrapped_VerNumber"
 
   [[ $VerboseArgs ]] && printf  "  (Verbose Args)"
   
@@ -2731,7 +2809,13 @@ while true ; do
 
     printColor  "\n\n  [d]   start with default sdl display"
     
-    [[ "$VM_InstanceName" =~ 'windows' ]] && printf " (useful for windows updates)"
+    if [[ "$VM_InstanceName" =~ 'windows' ]]; then  printf " (useful for windows updates)"
+
+    elif [[ $SDL_ScrnPcnt_Cmd ]]; then printColor " (%s%%)"  "$SDL_ScreenPercent"
+
+    elif [[ $SDL_ScrnPcnt_Error ]]; then printf " (ERROR %s%% %s > See settings)"  "$SDL_ScreenPercent"  "$SDL_ScrnPcnt_Error"
+
+    fi
 
     printColor 	"\n\n  [s]   start with spice display (scaleable) "  
 
@@ -2819,7 +2903,7 @@ while true ; do
 
     printf "\n\n"
 
-    eval quickemu "-vm $VM_Conf_File --vm_boot  $Extra_QE_Params" 
+    eval quickemu "-vm $VM_Conf_File --vm_boot  $SDL_ScrnPcnt_Cmd  $Extra_QE_Params" 
 
     [[ $InstancePID ]] && printf "\n  SDL: Use guest based display resize. Avoid resizing with the host mouse ...\n\n"
 

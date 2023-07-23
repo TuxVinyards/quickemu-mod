@@ -121,10 +121,14 @@ if [[ $1 == "QWRAP" ]] ; then
 
   #  Of note:  "--full-screen" only works with spice display ...  &&  will overide --screenpct
 
+  Extra_QE_Params=
+
   #  From quickemu 4.8, the value " --screenpct xx"  may be used on SDL, where xx is a value from 25 to 100  & Linux VM's only.
 
-  Extra_QE_Params="--screenpct 85"
+  #  Add screen percentage to here, instead of to Extra_QE_Params. Use just the value, eg. ="75"  Leave blank for none.
 
+  SDL_ScreenPercent="75"
+  
 
   ##  Q-WRAP  & 'quickemu' or 'quickget'  versioning:
 

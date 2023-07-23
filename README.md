@@ -9,6 +9,10 @@
 
 - Adds a delete to trash function.  Fix some consequent array re-scan bugs.
 
+\@2023.07.21
+
+- Add display screen percentage user interface & setting dialog
+
 ### Command line power with graphical ease
 
 - Alternative to quickgui for more advanced users

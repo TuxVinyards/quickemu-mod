@@ -2,24 +2,18 @@
 
 ## Quickemu / Quickget wrapping script
 
-- Now features full wrapping of both Quickemu & Quickget
-- Improved settings file gives selectable quickemu versioning & non-limited VM folders
+### Powerful text based User Interface
 
-\@2023/07/18
+- An alternative to quickgui for more advanced users
+- Extra diagnostics, easy customising & installation
 
-- Adds a delete to trash function.  Fix some consequent array re-scan bugs.
+- Features full wrapping of both Quickemu & Quickget
 
-\@2023.07.21
+\@2023.07.28
 
-- Add display screen percentage user interface & setting dialog
-
-### Command line power with graphical ease
-
-- Alternative to quickgui for more advanced users
-- Simple mouse click start
-- Improves Windows boot up
-- Full & extra diagnostics
-- Easy customising & installation
+- Now with zsync for developer daily-live iso's
+- Second shared drive (experimental)
+- And screen percentage dialog
 
 ![Screenshot at 2023-02-22 12-59-04-1920](https://user-images.githubusercontent.com/3956806/220619057-f63883d2-4d0d-4130-94e1-d444f1567be4.jpg)
 
@@ -108,6 +102,11 @@ No densely packed lines of unexplained regex style hieroglyphics, please.
 <http://mywiki.wooledge.org/BashGuide/Practices#Readability>
 
 ## Changes
+
+\@2023.07.28
+
+- Now with zsync for developer daily-live iso's
+- Second shared drive.  Currently Experimental.  See recent discussion on quickemu's Discord channel. (with thanks to @gnudoc)
 
 \@2023.07.21
 

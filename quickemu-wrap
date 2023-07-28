@@ -71,6 +71,17 @@
 #  shellcheck disable=SC2242
 
 
+# This script:
+
+ModVersion="2023.07.28"
+
+ModName="$(basename "$0")"
+
+# versioning for the internal quickget wrap script:
+
+QGW_Version="2023.07.28"
+
+
 
 ## Make sure shell is set during session to decimal separator of dot 
 
@@ -122,46 +133,14 @@ if [[ ! $QEMU ]] || [[ ! $QEMU_IMG ]]; then
 fi
 
 
-ModVersion="2023.07.23"
-
-ModName="$(basename "$0")"
-
-if [[ $ModName == "qqx" || $ModName == "qqX" ]]; then ModName_qqX=1 ; fi
-
-
-# SETTINGS   
-
-#  If placing the main file in /usr/bin,"
-
-#  then place the settings file as "/$HOME/.qmod_settings, OR if qqX in "/$HOME/.qqX/qqX_settings"
-
-#  For details, see notes at start of the settings file ...
-
-#  Use full quoted path & name if adding in a additional folder to this script or different to these defaults
-
-#  For .conf click starts, the Positional parameters need reading to check the settings file location;
-
-#  this would be expected to be where the specified wrap script is located as a first check
-
 
 if [[ $1 == "XDG" ]]; then 
 
-  # .desktop start  (belt & braces)
+  shift
+  XDG_DesktopStart=1
 
-  cd "$HOME"  || printf "\n\n XDG .desktop > HOME Folder not found " 
-
-  if [[ $(pwd) != "$HOME" ]]; then
-
-    printf "\n\n XDG .desktop > HOME Folder not found "
-    sleep 3
-    exit 1
-
-  else
-
-    CurrentFolder="$(pwd)"
-    shift
-
-  fi
+  cd "$HOME"  || printf "\n\n XDG .desktop starter  >  HOME Folder not found " 
+  CurrentFolder="$HOME"
 
 elif [[ "$1" == ?'-vm' ]]; then  
 
@@ -176,6 +155,23 @@ else
   CurrentFolder="$(pwd)"
   
 fi
+
+
+
+#  Pick up the SETTINGS file:  If placing the main file in /usr/bin,"
+
+#  then place the settings file as "/$HOME/.qmod_settings, OR if qqX in "/$HOME/.qqX/qqX_settings"
+
+#  For details, see notes at start of the settings file ...
+
+#  Use full quoted path & name if adding in a additional folder to this script or different to these defaults
+
+#  For .conf click starts, the Positional parameters need reading to check the settings file location;
+
+#  this would be expected to be where the specified wrap script is located as a first check
+
+
+if [[ $ModName == "qqx" || $ModName == "qqX" ]]; then ModName_qqX=1 ; fi
 
 
 if [[ $ModName_qqX ]]; then SettingsName="qqX_settings"
@@ -243,6 +239,32 @@ else
   printf "\n\n  ERROR with settings file detection \n\n  Re-check Installation &/or Installation instructions \n\n" ; sleep 10 
   
 fi
+
+
+function_xdg_start_folder () {
+
+  # For a .desktop start, to be run after the settings file has been loaded so that a $Default_VM_Folder can be available
+
+  #  Also can be called (belt & braces) at the other command line $1 trap towards end of script ...  REVIEW 
+
+  if [[ ! $(ls "$HOME/"*.conf 2> /dev/null) ]] && [[ -d "$Default_VM_Folder" ]]; then
+
+    cd "$Default_VM_Folder"  || printf "\n\n XDG .desktop starter  >  Default_VM_Folder not found " 
+
+    CurrentFolder="$Default_VM_Folder"
+
+  else
+
+    cd "$HOME"  || printf "\n\n XDG .desktop starter  >  HOME Folder not found " 
+
+    CurrentFolder="$HOME"
+
+  fi
+
+}
+
+
+[[ $XDG_DesktopStart ]] &&  function_xdg_start_folder
 
 
 # Function to create a list of preset VM locations 
@@ -316,6 +338,14 @@ function_refresh_and_reload_VM_arrays() {
 
   if [[ $ModName_qqX ]]; then source "$Q_Mod_SettingsFile" ; else source "$Q_Mod_SettingsFile"  QWRAP ; fi
 
+  # make sure other functions know that the settings was was re-read
+
+  SettingsFileAdjusted=1
+
+  # re-load:
+
+  [[ $XDG_DesktopStart ]] &&  function_xdg_start_folder
+ 
   function_create_VM_folderList  
 
   function_scan_VM_folderList  
@@ -1164,13 +1194,6 @@ function quickemu {
 
 
 
-##  WRAPPING FUNCTIONS FOR 'quickget' 
-
-#   Versioned, but INTENDED TO WORK FROM INSIDE 'quickemu-wrap'
-
-
-QGW_Version="2023.05.31"
-
 
 # The quick EMU/GET version numbers, now that rerouting functions quickemu & quickget are in place & code has been sourced
 
@@ -1221,6 +1244,9 @@ function check_screen_percentage {
 
 check_screen_percentage
 
+
+
+##  WRAPPING FUNCTIONS FOR 'quickget' 
 
 
 QGW_ArrList() {
@@ -1311,7 +1337,13 @@ function_quick_get_wrap ()  {
   done
 
 
-  if [[ $InternetUp ]] || [[ $Test_Internet == "i" ]]; then  
+  if [[ $Zsync_Updatable_ISO && $Zsync_OS_Name && $Zsync_Release_Name ]] ; then  
+
+    QGW_OS_Arr_NameSelected="$Zsync_OS_Name"
+
+    QGW_Release_Arr_NameSelected="$Zsync_Release_Name"
+
+  else
 
     tput rc; tput ed  
 
@@ -1327,131 +1359,133 @@ function_quick_get_wrap ()  {
 
     read -rp "  >  "  QGW_List_NumSelected
 
-  fi
-
-  if [[ $QGW_List_NumSelected == "b" ]]; then 
-  
-    QGW_List_NumSelected=
-
-    return
-
-  else
-
-    [[ $QGW_List_NumSelected -gt "${#QGW_OS_Array[@]}" ]] && QGW_List_NumSelected="${#QGW_OS_Array[@]}"
-
-    QGW_OS_Arr_NumSelected=$((QGW_List_NumSelected-1))
-
-    QGW_OS_Arr_NameSelected="${QGW_OS_Array[QGW_OS_Arr_NumSelected]}"
-
-    printColor  "\n\n  Selected = %s "  "$QGW_OS_Arr_NameSelected"
-
-  fi
-
-  #
-
-  QGW_Releases_ListRaw="$(quickget "$QGW_OS_Arr_NameSelected" | tail -n +2 | grep Releases)"
-
-  QGW_Releases_ListString="${QGW_Releases_ListRaw/'- Releases: '/}"
-
-  read -ra QGW_Releases_Array <<< "$QGW_Releases_ListString"
-
-  if [[ ${#QGW_Releases_Array[@]} -eq 1 ]] ; then
-
-   printf "\n\n  Only one current release found: "
-
-   QGW_Release_Arr_NameSelected="${QGW_Releases_Array[0]}"
-
-  else
-
-    printf "\n\n"
-
-    QGW_ArrList  "QGW_Releases_Array"
-
-    printColor "\n\n  Give LIST number of Release   [b] to go back \n\n"     
-
-    read -rp "  >  "  QGW_List_NumSelected    
 
     if [[ $QGW_List_NumSelected == "b" ]]; then 
-
-      QGW_List_NumSelected= 
-
-      QGW_OS_Arr_NameSelected=
     
-      function_quick_get_wrap
+      QGW_List_NumSelected=
+
+      return
 
     else
 
-      [[ $QGW_List_NumSelected -gt "${#QGW_Releases_Array[@]}" ]] && QGW_List_NumSelected="${#QGW_Releases_Array[@]}"
+      [[ $QGW_List_NumSelected -gt "${#QGW_OS_Array[@]}" ]] && QGW_List_NumSelected="${#QGW_OS_Array[@]}"
 
-      QGW_Release_Arr_NumSelected=$((QGW_List_NumSelected-1))
+      QGW_OS_Arr_NumSelected=$((QGW_List_NumSelected-1))
 
-      QGW_Release_Arr_NameSelected="${QGW_Releases_Array[QGW_Release_Arr_NumSelected]}"
+      QGW_OS_Arr_NameSelected="${QGW_OS_Array[QGW_OS_Arr_NumSelected]}"
+
+      printColor  "\n\n  Selected = %s "  "$QGW_OS_Arr_NameSelected"
 
     fi
 
-  fi
+    #
 
-  printColor  "\n\n  Selected = %s %s "  "$QGW_OS_Arr_NameSelected" "$QGW_Release_Arr_NameSelected"
+    QGW_Releases_ListRaw="$(quickget "$QGW_OS_Arr_NameSelected" | tail -n +2 | grep Releases)"
 
-  #
+    QGW_Releases_ListString="${QGW_Releases_ListRaw/'- Releases: '/}"
 
-  QGW_Editions_ListRaw="$(quickget "$QGW_OS_Arr_NameSelected" | tail -n +2 | grep Editions)"
+    read -ra QGW_Releases_Array <<< "$QGW_Releases_ListString"
 
-  QGW_Editions_ListString="${QGW_Editions_ListRaw/'- Editions: '/}"
 
-  QGW_Editions_ListTest="$(tr -d '[:space:]' <<< "$QGW_Editions_ListString" )"
+    if [[ ${#QGW_Releases_Array[@]} -eq 1 ]] ; then
 
-  if [[ $QGW_Editions_ListTest ]]; then
+    printf "\n\n  Only one current release found: "
 
-    read -ra QGW_Editions_Array <<< "$QGW_Editions_ListString"
-
-    if [[ ${#QGW_Editions_Array[@]} -eq 1 ]] ; then
-
-    printf "\n\n  Only one current edition found: "
-
-    QGW_Edition_Arr_NameSelected="${QGW_Editions_Array[0]}"
+    QGW_Release_Arr_NameSelected="${QGW_Releases_Array[0]}"
 
     else
 
       printf "\n\n"
 
-      QGW_ArrList  "QGW_Editions_Array"
+      QGW_ArrList  "QGW_Releases_Array"
 
-      printColor "\n\n  Give LIST number of Edition   [b] to go back \n\n"  
+      printColor "\n\n  Give LIST number of Release   [b] to go back \n\n"     
 
-      if [[ $QGW_OS_Arr_NameSelected == "fedora" ]]  && [[ $QGW_Release_Arr_NameSelected == "33" ]] || [[ $QGW_Release_Arr_NameSelected == "34" ]]; then 
-      
-        printf "  Note: Fedora 33 i3 and Fedora 34 Cinnamon are not possible \n\n"
+      read -rp "  >  "  QGW_List_NumSelected    
 
-      fi
+      if [[ $QGW_List_NumSelected == "b" ]]; then 
 
-      read -rp "  >  "  QGW_List_NumSelected   
+        QGW_List_NumSelected= 
 
-      if [[ $QGW_List_NumSelected == "b" ]]; then  
-
-        QGW_List_NumSelected=
         QGW_OS_Arr_NameSelected=
-        QGW_Release_Arr_NameSelected=
       
         function_quick_get_wrap
 
       else
 
-        [[ $QGW_List_NumSelected -gt "${#QGW_Editions_Array[@]}" ]] && QGW_List_NumSelected="${#QGW_Editions_Array[@]}"
-    
-        QGW_Edition_Arr_NumSelected=$((QGW_List_NumSelected-1))
+        [[ $QGW_List_NumSelected -gt "${#QGW_Releases_Array[@]}" ]] && QGW_List_NumSelected="${#QGW_Releases_Array[@]}"
 
-        QGW_Edition_Arr_NameSelected="${QGW_Editions_Array[QGW_Edition_Arr_NumSelected]}"
+        QGW_Release_Arr_NumSelected=$((QGW_List_NumSelected-1))
+
+        QGW_Release_Arr_NameSelected="${QGW_Releases_Array[QGW_Release_Arr_NumSelected]}"
 
       fi
 
     fi
 
-  else
+    printColor  "\n\n  Selected = %s %s "  "$QGW_OS_Arr_NameSelected" "$QGW_Release_Arr_NameSelected"
 
-    QGW_Edition_Arr_NameSelected=
+    #
 
-    printf "\n\n  Further selection not available"
+    QGW_Editions_ListRaw="$(quickget "$QGW_OS_Arr_NameSelected" | tail -n +2 | grep Editions)"
+
+    QGW_Editions_ListString="${QGW_Editions_ListRaw/'- Editions: '/}"
+
+    QGW_Editions_ListTest="$(tr -d '[:space:]' <<< "$QGW_Editions_ListString" )"
+
+    if [[ $QGW_Editions_ListTest ]]; then
+
+      read -ra QGW_Editions_Array <<< "$QGW_Editions_ListString"
+
+      if [[ ${#QGW_Editions_Array[@]} -eq 1 ]] ; then
+
+      printf "\n\n  Only one current edition found: "
+
+      QGW_Edition_Arr_NameSelected="${QGW_Editions_Array[0]}"
+
+      else
+
+        printf "\n\n"
+
+        QGW_ArrList  "QGW_Editions_Array"
+
+        printColor "\n\n  Give LIST number of Edition   [b] to go back \n\n"  
+
+        if [[ $QGW_OS_Arr_NameSelected == "fedora" ]]  && [[ $QGW_Release_Arr_NameSelected == "33" ]] || [[ $QGW_Release_Arr_NameSelected == "34" ]]; then 
+        
+          printf "  Note: Fedora 33 i3 and Fedora 34 Cinnamon are not possible \n\n"
+
+        fi
+
+        read -rp "  >  "  QGW_List_NumSelected   
+
+        if [[ $QGW_List_NumSelected == "b" ]]; then  
+
+          QGW_List_NumSelected=
+          QGW_OS_Arr_NameSelected=
+          QGW_Release_Arr_NameSelected=
+        
+          function_quick_get_wrap
+
+        else
+
+          [[ $QGW_List_NumSelected -gt "${#QGW_Editions_Array[@]}" ]] && QGW_List_NumSelected="${#QGW_Editions_Array[@]}"
+      
+          QGW_Edition_Arr_NumSelected=$((QGW_List_NumSelected-1))
+
+          QGW_Edition_Arr_NameSelected="${QGW_Editions_Array[QGW_Edition_Arr_NumSelected]}"
+
+        fi
+
+      fi
+
+    else
+
+      QGW_Edition_Arr_NameSelected=
+
+      printf "\n\n  Further selection not available"
+
+    fi
 
   fi
 
@@ -1460,31 +1494,77 @@ function_quick_get_wrap ()  {
   
   printColor  "\n\n  Selected =   %s "  "$QGW_DownloadSelection"
 
-  i=0
 
-  while [[ ${VM_Folder_List[i]} ]]; do
+  if [[ $Zsync_Updatable_ISO ]]; then
 
-    if [[ $i -eq 0 ]]; then printf "\n\n\n  [0]  %s (current)"  "${VM_Folder_List[i]}"
+    if [[ ! $Zsync_OS_Name || ! $Zsync_Release_Name  ]]; then
 
-    elif [[ $i -eq 1 ]]; then printf "\n\n  [1]  %s (default)"  "${VM_Folder_List[i]}"
+      printColor "\n\n  ERROR  Variables for OS Name &/or Release NOT found \n\n"
 
-    else printf "\n\n  [%s]  %s "  "$i" "${VM_Folder_List[i]}"
+    else
+
+      printf "\n\n  Updating the live boot development iso with any changes"
+
+      printColor "\n\n  May take a while to synchronise"
+
+      [[ $LastZsync -gt 200000 ]] && printColor " - last updated over %d days ago"  "$((LastZsync/86400))"
+
+      printf "\n\n"
+
+      ZsyncDownload=1
 
     fi
 
-    ((i +=1))
+  elif [[ "$QGW_DownloadSelection" == *'ubuntu'* ]] && [[ "$QGW_DownloadSelection" == *'daily'* ]]; then 
+  
+    printColor "  ** may download with some kind of NAMING variance ** "
 
-  done
+    ZsyncDownload=1
 
-  printf "\n\n\n"
+  else
 
-  QWG_DownLoadFolder="$Default_VM_Folder"
+    ZsyncDownload=
+
+  fi
+
+
+  if [[ $Zsync_Updatable_ISO && $Zsync_OS_Name ]]; then 
+
+      QWG_DownLoadFolder="$VM_Conf_Dir"
+
+  else
+
+    i=0
+
+    while [[ ${VM_Folder_List[i]} ]]; do
+
+      if [[ $i -eq 0 ]]; then printf "\n\n\n  [0]  %s (current)"  "${VM_Folder_List[i]}"
+
+      elif [[ $i -eq 1 ]]; then printf "\n\n  [1]  %s (default)"  "${VM_Folder_List[i]}"
+
+      else printf "\n\n  [%s]  %s "  "$i" "${VM_Folder_List[i]}"
+
+      fi
+
+      ((i +=1))
+
+    done
+
+    printf "\n\n\n"
+
+    QWG_DownLoadFolder="$Default_VM_Folder"
+
+  fi
   
   while true ; do
 
     printf "  Installation target folder:  %s "   "$QWG_DownLoadFolder"  
 
-    printColor  "\n\n  [enter] Start the download  [number] select a different (preset or current) folder  [h] help  [b] go back \n\n"
+    printColor  "\n\n  [enter] Start the download  "
+    
+    [[ ! $Zsync_Updatable_ISO ]] && printColor "[number] select a different (preset or current) folder  "
+    
+    printColor "[h] help  [b] go back \n\n"
 
     read -rp "  >  " QGW_DownloadStart
 
@@ -1512,7 +1592,9 @@ function_quick_get_wrap ()  {
       h)  
           printf "\n\n  Once the download and initial setup up has finished, the new folder and .conf file may be easily moved"
           printf "\n\n  and/or edited before running. Part downloads can usually be re-started, if stopped."
-
+          printf "\n\n  Zsync Iso Updates may leave residual rcksum files, if stopped, and may need removing."
+          printf "\n\n  But, if an iso.part file has been started, a restart is possible, after doing a re-sync."
+          printf "\n\n  If re-syncing, the rcksum files will be auto-removed."
       ;;
 
       *)
@@ -1534,13 +1616,42 @@ function_quick_get_wrap ()  {
     
     cd "$QWG_DownLoadFolder"  ||  function_conf_error  "FOLDER not accessible: $QWG_DownLoadFolder"
 
-    
-    printf "\n  Once a download and initial setup up has finished, the new folder and .conf file may be easily moved"
-    printf "\n\n  and/or edited before running. Part downloads can usually be re-started, if stopped."
-    
-    printf "  %s \n\n" "$QGW_DownloadSelection"
+    if [[ $Zsync_Updatable_ISO ]]; then
 
-    printColor "\n\n  [enter] to finish ALL current downloads "
+      printf "  If stopped, Zsync Iso Updates may leave residual rcksum files that %s will remove."  "$ModName"
+
+      printf "\n\n  To resume stopped downloads, any .iso.part files should be retained."
+
+      # https://bugs.launchpad.net/ubuntu/+source/zsync/+bug/477551
+
+      function remove_old_rcksum_files {
+
+        if [[ $(ls "$VM_Conf_Dir/"rcksum* 2> /dev/null) ]]; then
+
+          mapfile -t RckSumArray <<< "$(ls "$VM_Conf_Dir/"rcksum* 2> /dev/null)"
+
+          for RckItem in "${RckSumArray[@]}"; do
+
+            rm "$RckItem"
+
+          done
+
+        fi
+
+      }
+
+      remove_old_rcksum_files
+
+    else
+
+      printf "\n  Once a download and initial setup up has finished, the new folder and .conf file may be easily moved"
+      printf "\n\n  and/or edited before running. Part downloads can usually be re-started, if stopped."
+
+    fi
+    
+    if [[ $ZsyncDownload ]]; then  printf "\n\n" ; else printf "  %s \n\n" "$QGW_DownloadSelection" ; fi
+
+    printColor "\n\n  [enter] to finish ALL current downloads & zsync"
 
     printf "\n\n  Quickemu & downloader output: "
 
@@ -1564,17 +1675,58 @@ function_quick_get_wrap ()  {
     printf "\e[3A\r"
 
     sleep 2
-   
+
+    if [[ $Zsync_Updatable_ISO ]]; then 
+
+      while [[ ! $(ls "$VM_Conf_Dir/"rcksum* 2> /dev/null) ]]; do  sleep 2 ; done
+        
+    fi
+
+    function show_rcksum_progress {
+
+      RckFile="$(ls "$VM_Conf_Dir/"rcksum* 2> /dev/null)"
+
+      while [[ -e "$RckFile" ]]; do
+        
+        RckFile="$(ls "$VM_Conf_Dir/"rcksum* 2> /dev/null)"
+
+        RckDone="$(du -a "$RckFile")"
+        RckDone="${RckDone/"$RckFile"/}"
+
+        # gives some kind of rough indication that work is in progress  (percentages don't seem to be possible)
+
+        printf "  Synchronising  %s "  "$RckDone" 
+
+        sleep 2
+
+        printf "\e[2K\r"
+
+      done
+
+      
+    }
+
     while true ; do
 
+      if [[ $(ls "$VM_Conf_Dir/"rcksum* 2> /dev/null) ]]; then 
+      
+        show_rcksum_progress &
+       
+      fi
+     
       read -r 
 
-      if [[ $(pgrep aria2) || $(pgrep curl) || $(pgrep wget) ]]; then
+      # removing the old rcksum files not only tidies up but also stops the background monitor process
+
+      [[ $(ls "$VM_Conf_Dir/"rcksum* 2> /dev/null) ]] && remove_old_rcksum_files
+
+
+      if [[ $(pgrep aria2) || $(pgrep curl) || $(pgrep wget) || $(pgrep zsync) ]]; then
 
         pkill aria2
         pkill curl
         pkill wget 
-        pkill quickemu 
+        pkill zsync 
 
         QGW_DownloadStopped=1
 
@@ -1600,38 +1752,80 @@ function_quick_get_wrap ()  {
 
 
   New_VM_Folder=
- 
-  if [[ -d "${QWG_DownLoadFolder}/${QGW_OS_Arr_NameSelected}-${QGW_Release_Arr_NameSelected}-${QGW_Edition_Arr_NameSelected}" ]]; then 
 
-    New_VM_Folder="${QGW_OS_Arr_NameSelected}-${QGW_Release_Arr_NameSelected}-${QGW_Edition_Arr_NameSelected}"
+  New_VM_File=
 
-  elif [[ -d "${QWG_DownLoadFolder}/${QGW_OS_Arr_NameSelected}-${QGW_Release_Arr_NameSelected}" ]]; then 
+  if [[ ! $ZsyncDownload ]]; then
 
-    New_VM_Folder="${QGW_OS_Arr_NameSelected}-${QGW_Release_Arr_NameSelected}"
+    if [[ -d "${QWG_DownLoadFolder}/${QGW_OS_Arr_NameSelected}-${QGW_Release_Arr_NameSelected}-${QGW_Edition_Arr_NameSelected}" ]]; then 
 
-  elif [[ -d "${QWG_DownLoadFolder}/${QGW_OS_Arr_NameSelected}" ]]; then 
+      New_VM_Folder="${QGW_OS_Arr_NameSelected}-${QGW_Release_Arr_NameSelected}-${QGW_Edition_Arr_NameSelected}"
 
-    New_VM_Folder="${QGW_OS_Arr_NameSelected}"
+    elif [[ -d "${QWG_DownLoadFolder}/${QGW_OS_Arr_NameSelected}-${QGW_Release_Arr_NameSelected}" ]]; then 
 
-  fi
+      New_VM_Folder="${QGW_OS_Arr_NameSelected}-${QGW_Release_Arr_NameSelected}"
 
+    elif [[ -d "${QWG_DownLoadFolder}/${QGW_OS_Arr_NameSelected}" ]]; then 
 
-   New_VM_File=
+      New_VM_Folder="${QGW_OS_Arr_NameSelected}"
 
-  if [[ -f "${QWG_DownLoadFolder}/${QGW_OS_Arr_NameSelected}-${QGW_Release_Arr_NameSelected}.conf" ]]; then 
+    fi
 
-    New_VM_File="${QWG_DownLoadFolder}/${QGW_OS_Arr_NameSelected}-${QGW_Release_Arr_NameSelected}.conf"
+    if [[ -f "${QWG_DownLoadFolder}/${QGW_OS_Arr_NameSelected}-${QGW_Release_Arr_NameSelected}.conf" ]]; then 
 
-  elif [[ -f "${QWG_DownLoadFolder}/${QGW_OS_Arr_NameSelected}.conf" ]]; then 
+      New_VM_File="${QWG_DownLoadFolder}/${QGW_OS_Arr_NameSelected}-${QGW_Release_Arr_NameSelected}.conf"
 
-    New_VM_File="${QGW_OS_Arr_NameSelected}.conf"
+    elif [[ -f "${QWG_DownLoadFolder}/${QGW_OS_Arr_NameSelected}.conf" ]]; then 
+
+      New_VM_File="${QGW_OS_Arr_NameSelected}.conf"
+
+    fi
 
   fi
 
 
   QGW_FolderDelete=
 
-  if [[ $New_VM_Folder ]]; then
+  if  [[ $ZsyncDownload ]]; then
+
+    if [[ $QGW_DownloadStopped ]]; then 
+    
+      printf "\n\n  Download Stopped > Residual files may be present"
+      printf "\n\n  Removal of any residual files & folders has to be completed manually"
+
+      if [[ $Zsync_Updatable_ISO ]]; then
+
+        printf "\n\n  Part downloads can usually be re-started if the .iso.part file is retained."
+
+      else
+
+        printf "\n\n  Part downloads can usually be re-started if the folder is retained."
+        printf "\n\n  Dev downloads usually undergo some kind of NAMING variance"
+
+      fi
+
+    else  
+    
+      printf "\n\n  Hopefully all completed  ..." 
+
+      # Note (@2023/07) that quickget includes code to remove 'zs.old' files, which may or may not have been needed,
+          
+      # but Zsync can now give these files root protection so this removal may not work ...   REVIEW  Add a qqX copying mechanism? 
+
+      if [[ ! $Zsync_Updatable_ISO ]]; then  
+      
+        printf "\n\n  as Dev downloads usually undergo some kind of NAMING variance" 
+
+        printf "\n\n  checking of files & folders should to be completed manually"
+
+      fi
+      
+    fi
+
+    ZsyncDownload=
+
+
+  elif [[ $New_VM_Folder ]]; then
   
     printColor "\n  Folder created:  %s "  "$New_VM_Folder"
 
@@ -1745,10 +1939,28 @@ function_quick_get_wrap ()  {
 
   if [[ $VM_Conf_Dir ]]; then cd "$VM_Conf_Dir"  || function_conf_error  "Quickget-Wrap Working Directory NOT FOUND ," ; fi
 
+  
+  if [[ $Zsync_Updatable_ISO ]]; then 
 
-  function_refresh_and_reload_VM_arrays
+    LastZsync="0"
 
-  ByPass_VM_Array_Selector=1
+    date +%s > "$VM_InstanceName/zsync.date.txt"
+
+    SettingsFileAdjusted=
+
+    ByPass_VM_Array_Selector=1
+
+  else
+
+    # re-load arrays, if not already done
+    
+    SettingsFileAdjusted=1
+
+    function_refresh_and_reload_VM_arrays
+
+    ByPass_VM_Array_Selector=1
+
+  fi
 
 }
 
@@ -1826,16 +2038,23 @@ function_conf_error () {
 
   read -rp "  >  "   ErrorMenuSelect
 
-  [[ $ErrorMenuSelect == "q" ]] && printf "\n\n" && command exit 
+  if [[ $ErrorMenuSelect == "q" ]]; then 
+  
+    printf "\n\n"; command exit 
 
-  if [[ $ErrorMenuSelect == "c" ]] || [[ $ErrorMenuSelect == "e" ]] || [[ $ErrorMenuSelect == "gt" ]]; then  
+  elif [[ $ErrorMenuSelect == "c" ]] || [[ $ErrorMenuSelect == "e" ]] || [[ $ErrorMenuSelect == "gt" ]]; then  
   
     SelectArrayError=
     IgnoreFolderCheck=1
 
-    if [[ $ErrorMenuSelect == "e" ]]; then 
+    if [[ $ErrorMenuSelect == "c" ]]; then 
+
+      true
+
+    elif [[ $ErrorMenuSelect == "e" ]]; then 
 
       if [[ $NewSetupFlag ]]; then qmod_edit_settings ; else qmod_edit_settings  "conf" ; fi
+      
 
     elif [[ $ErrorMenuSelect == "gt" ]]; then 
 
@@ -1844,7 +2063,7 @@ function_conf_error () {
       return
 
     fi
-  
+ 
   else  
   
     if [[ $NewSetupFlag ]]; then 
@@ -1995,28 +2214,48 @@ function_print_conf_array () {
 
     else
 
-      if [[ -e "${VM_Array[$VM_List_Num,0]}/${VM_Array[$VM_List_Num,1]}" ]]; then 
+      ArrayConf_Item="${VM_Array[$VM_List_Num,0]}/${VM_Array[$VM_List_Num,1]}"
+
+      if [[ -e "$ArrayConf_Item" ]]; then 
 
         if [[ ! $ByPass_VM_Array_Selector ]]; then
 
           QcowTarget=
 
-          QcowTarget="$(grep 'disk_img' "${VM_Array[$VM_List_Num,0]}/${VM_Array[$VM_List_Num,1]}" 2> /dev/null)"
+          QcowTarget="$(grep 'disk_img' "$ArrayConf_Item" 2> /dev/null)"
 
           QcowTarget="${QcowTarget/'disk_img='/}"
 
           QcowTarget="${QcowTarget//'"'/}"
 
-          if [[ ! -e "${VM_Array[$VM_List_Num,0]}/$QcowTarget" ]]; then  
-            printColor "\n\n %2d  %s  (new)" "$VM_List_Num" "${VM_Array[$VM_List_Num,0]}/${VM_Array[$VM_List_Num,1]}"
+          # Newly downloaded VMs will have a qcow disk path in the .conf file BUT it won't be be there yet, 
+          # not until quickemu has done a first run against the .conf
+
+          if [[ ! -e "${VM_Array[$VM_List_Num,0]}/$QcowTarget" ]]; then 
+
+            printColor "\n\n %2d  %s  (new)" "$VM_List_Num" "$ArrayConf_Item"
+
           else
-            printf "\n\n %2d  %s " "$VM_List_Num" "${VM_Array[$VM_List_Num,0]}/${VM_Array[$VM_List_Num,1]}"
+
+            printf "\n\n %2d  %s " "$VM_List_Num" "$ArrayConf_Item"
+
+            if [[ "${VM_Array[$VM_List_Num,1]}" == 'ubuntu'* ]] && [[ "${VM_Array[$VM_List_Num,1]}" == *'daily'* ]]; then
+           
+              [[  ! $(du -b -t 500000 "${VM_Array[$VM_List_Num,0]}/$QcowTarget") ]]  &&  printf "(z)"
+
+              #  Live VMs only, as zsync only updates the iso file.  Live VM qcow2 disks are normally only 196k. 
+
+              #  Test ceiling is set at 500k.  REVIEW if problems.
+ 
+            fi
+
           fi
+
         fi
 
       else
 
-        printf "\n\n  ERROR  %s ' .conf ' not found: \n\n  %s \n\n" "$ModName" "${VM_Array[$VM_List_Num,0]}/${VM_Array[$VM_List_Num,1]}"
+        printf "\n\n  ERROR  %s ' .conf ' not found: \n\n  %s \n\n" "$ModName" "$ArrayConf_Item"
 
         function_conf_error  "config $VM_List_Num" 
         SelectArrayError=1
@@ -2074,11 +2313,11 @@ function_Select_VM () {
     
     if [[ $DefaultFolderError || $ExtraFolderError ]]; then 
 
-    printf "\n\n\n  Settings file: %s" "$Q_Mod_SettingsFile"
+      printf "\n\n\n  Settings file: %s" "$Q_Mod_SettingsFile"
 
-    [[ $DefaultFolderError ]] && printf "\n\n  ERROR: DEFAULT FOLDER   [enter] to edit settings file  [q] to quit " 
+      [[ $DefaultFolderError ]] && printf "\n\n  ERROR: DEFAULT FOLDER   [enter] to edit settings file  [q] to quit " 
 
-    [[ $ExtraFolderError ]] && printf "\n\n  ERROR: EXTRA FOLDER   [enter] to edit settings file  [q] to quit "
+      [[ $ExtraFolderError ]] && printf "\n\n  ERROR: EXTRA FOLDER   [enter] to edit settings file  [q] to quit "
 
     else
 
@@ -2094,7 +2333,7 @@ function_Select_VM () {
 
 
 
-    [[ $VM_Selection == "q" ]] && echo && exit directly 
+    [[ $VM_Selection == "q" || $VM_Selection == "Q" ]] && echo && exit directly 
 
     if [[ $DefaultFolderError || $ExtraFolderError ]]; then 
           
@@ -2109,7 +2348,15 @@ function_Select_VM () {
 
 
 
-    if [[ $VM_Selection == "gt" ]]; then
+    if [[ $VM_Selection == "gt" || $VM_Selection == "GT" ]]; then
+
+      if [[ $VM_Selection == "GT" ]]; then
+
+        printColor "\n\n  CAPS LOCK should be unset \n\n"
+
+        read -rp "  [enter] to continue  >  "
+
+      fi
 
       VM_Selection=
       function_quick_get_wrap 
@@ -2271,8 +2518,10 @@ function_KillPID_Menu() {
   #fi
 
   if [[ $InstancePID ]]; then 
+
+    [[ ! $P_Kill_WaitSecs ]] && P_Kill_WaitSecs="20"
  
-    sleep 40   # REVIEW  can message output be better monitored?
+    sleep  "$P_Kill_WaitSecs"      # REVIEW  
 
     printColor "\n  Quickemu instance %s on PID:  %s"  "$VM_InstanceName"  "$InstancePID"
 
@@ -2478,6 +2727,10 @@ function_delete_Selected_VM () {
     printColor "\n\n  [enter] to return or continue \n\n" 
     read -rp "  > "
 
+    VM_InstanceName="$VM_InstanceName""-Deleted"
+
+    SettingsFileAdjusted=1
+
     function_refresh_and_reload_VM_arrays
 
   fi
@@ -2597,26 +2850,13 @@ function_show_main_menu_header () {
 
 if [[ $1 ]]; then
 
-  # simple API for eg .desktop or .conf starts  ie.  --vm  "path/folder/file.conf"   
+  # simple API for command line or .conf starts  ie.  --vm  "path/folder/file.conf"   
 
-  if [[ $1 == "XDG" ]]; then 
+  if [[ $1 == "XDG" ]]; then
 
-    # .desktop start  (belt & braces)
-
-    cd "$HOME"  || printf "\n\n XDG .desktop > HOME Folder not found " 
-
-    if [[ $(pwd) != "$HOME" ]]; then
-
-      printf "\n\n XDG .desktop > HOME Folder not found "
-      sleep 3
-      exit 1
-
-    else
-
-      CurrentFolder="$(pwd)"
-      shift
-
-    fi
+    # belt & braces, see other call at start of script
+    shift
+    function_xdg_start_folder
 
   elif [[ "$1" != ?'-vm' ]]; then  
   
@@ -2823,6 +3063,119 @@ while true ; do
     printf "\n"
 
     printf  "\n\n  [gt]  quickget a new distro"
+
+    if [[ "$VM_InstanceName" == 'ubuntu'* ]] && [[ "$VM_InstanceName" == *'daily'* || "$VM_InstanceName" == "ubuntustudio-dvd" ]]; then 
+    
+      if [[ ! $(du -b -t 500000 "$VM_InstanceName/disk.qcow2") ]] && [[ $(ls "$VM_InstanceName/"*devel.iso 2>/dev/null) ]] ; then
+
+        #  Live VMs only, as zsync only updates the iso file.  Live VM qcow2 disks are normally only 196k.  
+        
+        #  Test ceiling is set at 500k.  REVIEW if problems.
+
+        if [[ -e "$VM_InstanceName/zsync.date.txt" ]]; then
+
+          SyncDateNow="$(date +%s)"
+
+          SyncDateOld="$(cat "$VM_InstanceName/zsync.date.txt")"
+
+          LastZsync="$((SyncDateNow - SyncDateOld))"
+
+          #  older than 6hrs (in epoch seconds)
+
+          if [[ $LastZsync -gt 21600 ]]; then  printColor "   [z] run a quick zsync iso update - last run %d hrs ago"  "$((LastZsync/3600))"
+
+          else  printf "   [z] run a quick zsync iso update - last run %d hrs ago"  "$((LastZsync/3600))"
+          
+          fi
+
+        else
+
+          date +%s > "$VM_InstanceName/zsync.date.txt"
+            
+        fi
+
+
+        function_hide_quickget_code_snippets_in_a_way_that_retains_a_formatted_display () {
+
+          ## FROM:  function get_ubuntu in quickget (original, ver 4.8)
+
+          if [[ "${RELEASE}" == *"daily"* ]] && [ "${OS}" == "ubuntustudio" ]; then
+              # Ubuntu Studio daily-live images are in the dvd directory
+              RELEASE="dvd"
+          elif [ "${RELEASE}" == "daily-canary" ] && [ "${OS}" != "ubuntu" ]; then
+              # daily-canary is only available for Ubuntu, switch flavours to daily-live
+              RELEASE="daily-live"
+          elif [ "${RELEASE}" == "daily-legacy" ] && [ "${OS}" != "ubuntu" ]; then
+              # daily-legacy is only available for Ubuntu, switch flavours to daily-live
+              RELEASE="daily-live"
+          fi
+
+          # AND from function list_csv()
+
+          # shellcheck disable=SC2086,SC2034
+
+          if [ "${OS}" == "macos" ]; then
+            DOWNLOADER="macrecovery"
+
+          elif [ "${OS}" == "ubuntu" ] && [ "${RELEASE}" == "daily-canary" ] && [ ${HAS_ZSYNC} -eq 1 ]; then
+            DOWNLOADER="zsync"
+
+          elif [ "${OS}" == "ubuntu" ] && [ "${RELEASE}" == "daily-legacy" ] && [ ${HAS_ZSYNC} -eq 1 ]; then
+            DOWNLOADER="zsync"
+
+          elif [[ "${OS}" == *"ubuntu"* ]] && [ "${RELEASE}" == "devel" ] && [ ${HAS_ZSYNC} -eq 1 ]; then
+            DOWNLOADER="zsync"
+
+          # qqX: NB only the iso gets dubbed with 'devel' suffix, otherwise VMs they keep their names 
+          
+          # eg  'ubuntu-mate-daily-live' 'ubuntustudio-dvd' 'ubuntu-daily-canary'
+
+
+          # An actual 'ubuntu-devel' release or folder doesn't seem to ever get created or offered.
+
+          # Presume release=devel (@2023/07) has now been superseded, or was merely intended as an indicative name only ...
+
+          
+          # Also note that quickget includes code to remove 'zs.old' files, which may or may not have been needed,
+          
+          # but Zsync can now give these files root protection so this removal may not work ...   REVIEW  Add a qqX copying mechanism? 
+
+          else
+            DOWNLOADER="${DL}"
+          fi
+
+        }
+
+        #  Sort out the quickget / function_quick_get_wrap  call & the var/flags   
+        
+        # Expect these to need updating from time to time ...
+
+        Zsync_OS_Name="$VM_InstanceName"
+
+        Zsync_OS_Name="${Zsync_OS_Name/'-daily'/}"
+        Zsync_OS_Name="${Zsync_OS_Name/'-live'/}"
+        Zsync_OS_Name="${Zsync_OS_Name/'-canary'/}"
+        Zsync_OS_Name="${Zsync_OS_Name/'-legacy'/}"
+        Zsync_OS_Name="${Zsync_OS_Name/'-jammy'/}"
+        Zsync_OS_Name="${Zsync_OS_Name/'-dvd'/}"
+
+        Zsync_Release_Name="$VM_InstanceName"
+
+        Zsync_Release_Name="${Zsync_Release_Name/"${Zsync_OS_Name}-"/}"
+
+        #echo; echo "$Zsync_OS_Name  $Zsync_Release_Name" 
+
+        Zsync_Updatable_ISO=1
+
+      fi
+
+    else 
+
+      Zsync_Updatable_ISO=
+      Zsync_OS_Name=
+      Zsync_Release_Name=
+
+    fi
     
     printf  "\n\n  [h]   show help & info   [set] open settings file in text editor "
 
@@ -2893,6 +3246,18 @@ while true ; do
   elif [[ $MainMenuChoice == "gt" ]] ; then
 
     function_quick_get_wrap
+
+  elif [[ $MainMenuChoice == "z" ]] ; then
+
+    if [[ $Zsync_Updatable_ISO && $Zsync_OS_Name && $Zsync_Release_Name ]]; then
+
+      function_quick_get_wrap
+
+    else 
+
+      printColor "\n\n  %s is not being recognised as Zsync updatable Release \n\n"   "$VM_InstanceName"
+
+    fi
 
   elif [[ $MainMenuChoice == "m" ]] ; then
 

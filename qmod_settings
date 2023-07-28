@@ -98,6 +98,15 @@ ExtraArgs=
 #  See  https://qemu.readthedocs.io/en/latest/system/invocation.html
 
 
+#  For a second/shared drive (thanks @gnudoc on the quickemu Discord channel)  do "qemu-img create -f qcow2 disk2.qcow2 40G"  or as required
+
+#  Set  ExtraArgs=" -device virtio-blk-pci,drive=SecondDisk -drive id=SecondDisk,if=none,format=qcow2,file=/vm_folder/disk2.qcow2"  
+
+#  Edit path & boot a VM.  Use 'Disks'  Gparted or similar to find, format and mount.  
+
+#  This Second disk should be availble to all VMs and act as a shared resource.  Note: Experimental.
+
+
 KVM_MSR_ModProbeFile="/etc/modprobe.d/kvm-quickemu.conf"
 
 # File for default KVM behaviour for unhandled machine-specific registers. 

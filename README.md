@@ -76,7 +76,13 @@ Read the in-script notes & the settings file for further details on location and
 
 Note the .dot when adding to ~ | $HOME will tidy the file away as hidden. Settings may be edited via the script menu or via ctrl-h etc to unhide.
 
-Finally, whatever software you are using, standard good practice: always make backups of any critical VM's
+The scripts have been carefully tested and have been written with plenty of preventative error handling routines. However, as with all software, please remember that standard good practice is to always make backups of anything critical.
+
+## Updates
+
+ \@ 2023/08 Quickemu-Wrap is probably to be seen as fairly complete and tested. The new follow-on project `qqX` to be shortly released, is intended to provide a more complete packaging for this script.
+
+Some recent changes have added new values to the settings file.  When substiuting your current wrap script with a newer one, you should also check the settings file for new options. The main script will supply default values for any new items but to change defaults you should paste the new lines into your current file.
 
 ## Issues
 

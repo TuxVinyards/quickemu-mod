@@ -2,7 +2,11 @@
 
 ## Quickemu / Quickget wrapping script
 
-### Powerful text based User Interface
+### Powerful text based User Interface  
+
+\@2023.08.26  
+
+[qqX](https://github.com/TuxVinyards/qqX) is now released.  Check it out .... 
 
 - An alternative to quickgui for more advanced users
 - Extra diagnostics, easy customising & installation
